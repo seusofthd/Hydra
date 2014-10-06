@@ -82,7 +82,7 @@ public class NetworkManagerServer implements Runnable {
 		reservedInstances.add(instance);
 	}
 
-	private void registerVM(EC2Instance instance, ServerStreams2 sstreams) {
+	private void registerVM(EC2Instance instance, ServerStreamsJava sstreams) {
 		instance.sstreams = sstreams;
 		reservedInstances.remove(instance);
 		availableInstances.add(instance);
@@ -117,7 +117,7 @@ public class NetworkManagerServer implements Runnable {
 				// DynamicObjectInputStream ois = new
 				// DynamicObjectInputStream(in,
 				// this.getClass().getClassLoader());
-				toRouter = new ServerStreams2(ois, oos);
+				toRouter = new ServerStreamsJava(ois, oos);
 				System.out.println("Connection to router established");
 				listener.execute(new Receiving(mysocket, toRouter));
 			} catch (Exception ex) {
@@ -131,7 +131,7 @@ public class NetworkManagerServer implements Runnable {
 		}
 	}
 
-	ServerStreams2 toRouter;
+	ServerStreamsJava toRouter;
 
 	@Override
 	public void run() {
@@ -152,7 +152,7 @@ public class NetworkManagerServer implements Runnable {
 				OutputStream out = mysocket.getOutputStream();
 				ObjectOutputStream oos = new ObjectOutputStream(out);
 				ObjectInputStream ois = new ObjectInputStream(in);
-				ServerStreams2 vmStreams = new ServerStreams2(ois, oos);
+				ServerStreamsJava vmStreams = new ServerStreamsJava(ois, oos);
 				System.out.println("Connection to VM " + mysocket.getInetAddress().toString() + " established");
 				listener.execute(new Receiving(mysocket, vmStreams));
 			} catch (Exception ex) {
@@ -167,11 +167,11 @@ public class NetworkManagerServer implements Runnable {
 		Object state = null;
 		Class stateDType = null;
 		Pack myPack = null;
-		ServerStreams2 sstreams = null;
+		ServerStreamsJava sstreams = null;
 		Socket socket = null;
 		EC2Instance instance = null;
 
-		public Receiving(Socket socket, ServerStreams2 sstreams) {
+		public Receiving(Socket socket, ServerStreamsJava sstreams) {
 			super();
 			this.sstreams = sstreams;
 			this.socket = socket;
@@ -197,8 +197,8 @@ public class NetworkManagerServer implements Runnable {
 			}
 		};
 
-		
 		int counter = 0;
+
 		@Override
 		public void run() {
 			// new Thread(sender).start();
@@ -293,22 +293,27 @@ public class NetworkManagerServer implements Runnable {
 					}
 					break;
 				case EXECUTE:
-					// ServerStreams2 VMsteams = getAvailableVMstream();
+					ServerStreamsJava VMsteams = getAvailableVMstream();
 					// System.out.println("VM is selected. Sending to VM to execute...");
 					receive.rttManagerToVM = System.currentTimeMillis();
-					for (EC2Instance ec2Instance : availableInstances) {
-						if (ec2Instance.socket!=null && !ec2Instance.socket.isClosed()) {
-//							availableInstances.remove(ec2Instance);
-//							continue;
-							try {
-								ec2Instance.sstreams.send(receive);
-								System.out.println("send to " + ec2Instance.socket.getInetAddress() + " Waiting for results...");
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
+//					for (EC2Instance ec2Instance : availableInstances) {
+//						if (ec2Instance.socket != null && !ec2Instance.socket.isClosed()) {
+							// availableInstances.remove(ec2Instance);
+							// continue;
+//							try {
+//								ec2Instance.sstreams.send(receive);
+//								System.out.println("send to " + ec2Instance.socket.getInetAddress() + " Waiting for results...");
+//							} catch (Exception e) {
+//								e.printStackTrace();
+//							}
+//						}
+//					}
+					 try {
+						VMsteams.send(receive);
+					} catch (IOException e2) {
+						// TODO Auto-generated catch block
+						e2.printStackTrace();
 					}
-//					VMsteams.send(receive);
 
 					// run loclly or remotelly
 					// MethodPackage methodPack = null;
@@ -339,11 +344,12 @@ public class NetworkManagerServer implements Runnable {
 					// update instance fields
 					break;
 				case REG_VM:
-//					for (EC2Instance ec2Instance : availableInstances) {
-//						if (ec2Instance.socket==null || ec2Instance.socket.isClosed()) {
-//							availableInstances.remove(ec2Instance);
-//						}
-//					}
+					// for (EC2Instance ec2Instance : availableInstances) {
+					// if (ec2Instance.socket==null ||
+					// ec2Instance.socket.isClosed()) {
+					// availableInstances.remove(ec2Instance);
+					// }
+					// }
 					instance = new EC2Instance();
 					instance.socket = socket;
 					instance.sstreams = sstreams;
@@ -388,7 +394,7 @@ public class NetworkManagerServer implements Runnable {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					
+
 					break;
 				case FREE:
 					try {
@@ -403,7 +409,7 @@ public class NetworkManagerServer implements Runnable {
 			return;
 		};
 
-		private ServerStreams2 getAvailableVMstream() {
+		private ServerStreamsJava getAvailableVMstream() {
 			for (int i = 1; i < availableInstances.size(); i++) {
 				if (availableInstances.get(i).sstreams != null) {
 					return availableInstances.get(i).sstreams;

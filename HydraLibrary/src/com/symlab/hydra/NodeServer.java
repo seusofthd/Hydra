@@ -56,7 +56,8 @@ public class NodeServer extends Thread {
 		DataPackage sentMessage = null;
 		ProgramProfiler progProfiler = new ProgramProfiler();
 		DeviceProfiler devProfiler = new DeviceProfiler(context);
-		Profiler profiler = new Profiler(context, progProfiler, devProfiler);
+		Profiler profiler = null;
+//		Profiler profiler = new Profiler(context, progProfiler, devProfiler);
 		Long totalExecDuration = null;
 		String apkFilePath = "";
 		File dexOutputDir = null;

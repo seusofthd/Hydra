@@ -392,7 +392,7 @@ public class ToRouterConnection {
 						result = resultContainer.result;
 						Profiler.addEnergy(resultContainer.energyConsumption);
 					}
-					counter = (counter+1)%5;
+					counter = (counter+1)%1;
 					if (counter==0) {
 						receive.finish=true;
 					}

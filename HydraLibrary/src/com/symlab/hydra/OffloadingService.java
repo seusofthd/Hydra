@@ -116,7 +116,7 @@ public class OffloadingService extends Service {
 		serviceRegister = new ServiceRegister(this, toRouter, thisApkPath);
 		progProfiler = new ProgramProfiler();
 		devProfiler = new DeviceProfiler(this);
-		profiler = new Profiler(this, progProfiler, devProfiler);
+//		profiler = new Profiler(this, progProfiler, devProfiler);
 		executor.execute(taskQueueHandler);
 		// statusUpdater.startUpdate();
 		// me = this;

@@ -89,7 +89,7 @@ public class MainActivity extends Activity {
 		dh.stopOffloadingService();
 	}
 
-	public void execute2(View v) {
+	public void execute_ocr(View v) {
 		// final String classMethodName = CameraListener.class.getName() + "#" +
 		// "ocrCall" + "#1";
 		// dh.startProfiling(classMethodName);
@@ -216,7 +216,7 @@ public class MainActivity extends Activity {
 					final ResultTicket rt;
 					final Boolean result;
 					final String classMethodName = Sorting.class.getName() + "#" + "solveNQueens" + "#" + 0 + "#" + 1;
-					dh.startProfiling(classMethodName);
+//					dh.startProfiling(classMethodName);
 					result = true;
 					subtasks = new NQueens();
 					final Class<?>[] paramTypes = { int.class, int.class, int.class };

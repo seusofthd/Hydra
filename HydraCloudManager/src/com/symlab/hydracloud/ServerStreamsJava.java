@@ -10,18 +10,18 @@ import java.net.Socket;
 import com.symlab.hydra.network.DataPackage;
 
 
-public class ServerStreams2 {
+public class ServerStreamsJava {
 
 	private ObjectInputStream objIn;
 	private ObjectOutputStream objOut;
 	private Socket socket;
 
-	public ServerStreams2(ObjectInputStream ois, ObjectOutputStream oos) {
+	public ServerStreamsJava(ObjectInputStream ois, ObjectOutputStream oos) {
 		this.objIn = ois;
 		this.objOut = oos;
 	}
 
-	public ServerStreams2(ObjectInputStream ois, ObjectOutputStream oos, Socket socket) {
+	public ServerStreamsJava(ObjectInputStream ois, ObjectOutputStream oos, Socket socket) {
 		this.objIn = ois;
 		this.objOut = oos;
 		this.socket = socket;

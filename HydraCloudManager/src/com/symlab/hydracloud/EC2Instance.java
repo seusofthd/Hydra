@@ -17,7 +17,7 @@ public class EC2Instance {
 	public String region;
 	public int highConditionCount = 0;
 	public int lowConditionCount = 0;
-	public ServerStreams2 sstreams = null;
+	public ServerStreamsJava sstreams = null;
 	public Socket socket = null;
 
 	public EC2Instance() {
