@@ -52,7 +52,7 @@ public class DeviceProfiler {
 	private long diffIdleTask;
 	private long prevIdleTask;
 	private ArrayList<Long> idleSystem;
-	private ArrayList<Integer> screenBrightness;
+	ArrayList<Integer> screenBrightness;
 	private HandlerThread updatingThread;
 	private Handler pidCpuUsageHandler;
 	private Handler screenBrightnessHandler;
@@ -113,6 +113,11 @@ public class DeviceProfiler {
 		stopCalculatingPidCpuUsage();
 		stopCalculatingScreenBrightness();
 		batteryVoltageDelta = (long) DeviceStatus.batteryVoltage - mStartBatteryVoltage;
+		System.out.println(screenBrightness);
+		System.out.println(idleSystem);
+		System.out.println(systemCpuUsage);
+		System.out.println(batteryVoltageDelta);
+		
 	}
 
 	boolean firstTime;

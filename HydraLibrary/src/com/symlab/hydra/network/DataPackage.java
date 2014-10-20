@@ -12,24 +12,26 @@ import java.net.InetAddress;
 public class DataPackage implements Serializable {
 
 	private static final long serialVersionUID = -3825185830334989901L;
-
+	public Integer id = new Integer(0);
+	public Msg destination; 
 	public Msg what;
+	
 	public InetAddress source;
 	public InetAddress dest;
-	// public Object data;
 	public Byte[] dataByte;
 	public Long rttManagerToVM = new Long(0);
 	public Long rttRouterToVM = new Long(0);
 	public Long rttDeviceToVM = new Long(0);
 	public Long pureExecTime = new Long(0);
+	
 
 	public Boolean finish = false;
 
 	private DataPackage(Msg what, Object data, InetAddress source) {
 		this.what = what;
-		// this.data = data;
 		this.dataByte = serialize(data);
 		this.source = source;
+		serialize(data);
 	}
 
 	public static DataPackage obtain() {

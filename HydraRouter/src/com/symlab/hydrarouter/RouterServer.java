@@ -11,6 +11,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -32,11 +33,12 @@ public class RouterServer implements Runnable {
 	private ServerSocket serverSocket = null;
 	private WorkerList workerList;
 	private ExecutorService pool;
-
+	PacketQueue packetQueue;
 	private Boolean isServerShutdown = true;
 
-	public RouterServer(WorkerList workerList) {
+	public RouterServer(WorkerList workerList, PacketQueue packetQueue) {
 		this.workerList = workerList;
+		this.packetQueue = packetQueue;
 		pool = Executors.newCachedThreadPool();
 	}
 
@@ -227,6 +229,7 @@ public class RouterServer implements Runnable {
 					InetAddress deviceID = (InetAddress) receive.source;
 					Device device = workerList.getDevices(deviceID);
 					receive.finish = false;
+					packetQueue.isCloudBusy=false;
 					try {
 						device.streams.send(receive);
 					} catch (IOException e) {
@@ -277,8 +280,6 @@ public class RouterServer implements Runnable {
 	class DeviceReceiving implements Runnable {
 		private Device device;
 
-		// private String clientId = "";
-
 		public DeviceReceiving(Device device) {
 			super();
 			this.device = device;
@@ -303,8 +304,6 @@ public class RouterServer implements Runnable {
 					break;
 				switch (receive.what) {
 				case SUPPORT_OFFLOAD:
-					// clientId = (String) receive.data;
-					// device.id = clientId;
 					workerList.addDevice(device);
 					System.out.println(workerList.devices.size() + " devices are connected.");
 					sentMessage = DataPackage.obtain(Msg.SUPPORT_OFFLOAD);
@@ -350,37 +349,21 @@ public class RouterServer implements Runnable {
 					}
 					break;
 				case OFFLOAD:
-					// ArrayList<InetAddress> list = new
-					// ArrayList<InetAddress>();
-					// if (connectedToCloud) {
-					// list.add(device.socket.getLocalAddress());
-					// sentMessage = DataPackage.obtain(Msg.CLOUD, list);
-					// } else {
-					// System.out.println("Number of total connected devices : "
-					// + workerList.devices.size());
-					// for (Device d : workerList.devices) {
-					// if (d.state == DeviceState.STATE_AVAILABLE) {
-					// list.add(d.ip);
-					// break;
-					// }
-					// }
-					// sentMessage = DataPackage.obtain(Msg.DEVICE_LIST, list);
-					// }
-					// list.add(toCloud.getLocalIpAddress());
-					// try {
-					// device.streams.send(sentMessage);
-					// } catch (IOException e) {
-					// e.printStackTrace();
-					// }
-
 					break;
 				case INIT_OFFLOAD:
-					sentMessage = DataPackage.obtain(Msg.READY);
-					try {
-						device.streams.send(sentMessage);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
+					packetQueue.enqueue(receive);
+					break;
+				case APK_REQUEST:
+					packetQueue.enqueue(receive);
+					break;
+				case APK_SEND:
+					packetQueue.enqueue(receive);
+					break;
+				case READY:
+					packetQueue.enqueue(receive);
+					break;
+				case EXECUTE:
+					packetQueue.enqueue(receive);
 					break;
 				case FREE:
 					String name = (String) receive.deserialize();
@@ -389,40 +372,13 @@ public class RouterServer implements Runnable {
 					break;
 				case RESPONSE_STATUS:
 					Status s = (Status) receive.deserialize();
-					// if (clientId != "")
-					// statusTable.setStatus(clientId, s);
-					// else
-					// Log.e(TAG, "This device is not registered!");
-					break;
-				case EXECUTE:
-					receive.rttRouterToVM = System.currentTimeMillis();
-					if (connectedToCloud && MainActivity.useCloud) {
-						System.out.println("*Sending task to the Cloud*");
-						try {
-							workerList.toCloud.send(receive);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					} else {
-						for (Device d : workerList.devices) {
-							if (d.state == DeviceState.STATE_AVAILABLE) {
-								try {
-									System.out.println("*Sending method to offloadee " + d.ip + "*");
-									d.streams.send(receive);
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-								break;
-							}
-						}
-					}
-					device.streams = device.streams;
 					break;
 				case RESULT:
 					receive.rttRouterToVM = System.currentTimeMillis() - receive.rttRouterToVM;
 					System.out.println("RTT(Router->Offloadee->Router) = " + receive.rttRouterToVM / 1000f);
 					InetAddress deviceID = (InetAddress) receive.source;
 					Device device = workerList.getDevices(deviceID);
+					packetQueue.isSmartphoneBusy=false;
 					try {
 						device.streams.send(receive);
 					} catch (IOException e) {

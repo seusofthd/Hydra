@@ -12,9 +12,10 @@ import android.util.Log;
 
 import com.symlab.hydra.lib.MethodPackage;
 import com.symlab.hydra.lib.OffloadableMethod;
+import com.symlab.hydra.network.Msg;
 import com.symlab.hydra.profilers.LogRecord;
 
-public class DandelionHelper implements Serializable {
+public class HydraHelper implements Serializable {
 
 	private static final String TAG = "DandelionHelper";
 
@@ -41,7 +42,7 @@ public class DandelionHelper implements Serializable {
 
 	};
 
-	public DandelionHelper(Context context) {
+	public HydraHelper(Context context) {
 		this.mContext = context;
 		offloadingServiceIntent = new Intent(context, OffloadingService.class);
 		appName = context.getPackageName();
@@ -93,14 +94,6 @@ public class DandelionHelper implements Serializable {
 			return false;
 	}
 
-	public void postTask(MethodPackage methodPack, Class<?> reutrnType) {
-		OffloadableMethod offloadableMethod = new OffloadableMethod(mContext, appName, methodPack, reutrnType);
-		try {
-			mService.addTaskToQueue(offloadableMethod);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
-	}
 	
 	public void postTask(OffloadableMethod offloadableMethod) {
 		try {

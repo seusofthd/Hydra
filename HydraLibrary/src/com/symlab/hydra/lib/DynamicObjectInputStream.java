@@ -1,5 +1,6 @@
 package com.symlab.hydra.lib;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -72,6 +73,20 @@ public class DynamicObjectInputStream extends ObjectInputStream {
 			mCurrentDexLoader = new DexClassLoader(apkFile, optDir, null, mCurrent);
 		else
 			mCurrentDexLoader = new DexClassLoader(apkFile, optDir, null, mCurrentDexLoader);
+	}
+
+	/**
+	 * Add a Dex file to the Class Loader for dynamic class loading for clients
+	 * 
+	 * @param apkFile
+	 *            the apk package
+	 */
+	public void addDex(final File apkFile) {
+		if (mCurrentDexLoader == null)
+			mCurrentDexLoader = new DexClassLoader(apkFile.getAbsolutePath(), apkFile.getParentFile().getAbsolutePath(), null, mCurrent);
+		else
+			mCurrentDexLoader = new DexClassLoader(apkFile.getAbsolutePath(), apkFile.getParentFile().getAbsolutePath(), null, mCurrentDexLoader);
+
 	}
 
 }

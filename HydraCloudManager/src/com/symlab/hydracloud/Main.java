@@ -5,6 +5,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import com.symlab.hydra.lib.Constants;
+import com.symlab.hydra.network.cloud.EC2Instance;
 
 public class Main {
 

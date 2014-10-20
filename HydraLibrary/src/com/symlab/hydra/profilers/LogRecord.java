@@ -38,7 +38,7 @@ public class LogRecord implements Parcelable {
 	 * Convert the log record to string for storing
 	 */
 	public String toString() {
-		String progProfilerRecord = methodName.substring(methodName.indexOf('#') + 1) + ", " + execDuration / 1000000 + "ms, " + energyConsumption + "mJ, " + cpuEnergy + "mJ, " + screenEnergy + "mJ, " + bluetoothEnergy + "mJ";// +
+		String progProfilerRecord = methodName.substring(methodName.indexOf('#') + 1) + ", " + execDuration / 1000000 + "ms, " + energyConsumption + "mJ, " + cpuEnergy + "mJ, " + screenEnergy + "mJ, " + bluetoothEnergy + "mJ" ;// +
 																																																									// instructionCount
 																																																									// +
 																																																									// ", "

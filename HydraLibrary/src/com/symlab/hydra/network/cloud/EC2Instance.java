@@ -1,23 +1,26 @@
-package hk.ust.symlab.hydra.network.cloud;
+package com.symlab.hydra.network.cloud;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.net.InetAddress;
+import java.net.Socket;
 
 import com.symlab.hydra.network.ServerStreams;
 
-public class EC2Instance {
+public class EC2Instance implements Serializable{
 	public String name;
 	public String ID;
 	public String type;
 	public InstanceState state;
-	public InetAddress elasticIP;
+	public InetAddress publicIP;
 	public InetAddress privateIP;
 	public int port;
 	public String region;
 	public int highConditionCount = 0;
 	public int lowConditionCount = 0;
-	public ServerStreams sstreams = null;
+	public transient ServerStreamsJava sstreams = null;
+	public transient Socket socket;
 
 	public EC2Instance() {
 	}
@@ -28,7 +31,7 @@ public class EC2Instance {
 		this.ID = ID;
 		this.type = type;
 		this.state = state;
-		this.elasticIP = elasticIP;
+		this.publicIP = elasticIP;
 		this.privateIP = privateIP;
 		this.port = port;
 		this.region = region;

@@ -1,5 +1,6 @@
 package com.symlab.hydra.network;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.OptionalDataException;
@@ -12,7 +13,7 @@ public class ServerStreams {
 
 	private DynamicObjectInputStream objIn;
 	private ObjectOutputStream objOut;
-	private Socket socket;
+	public Socket socket;
 
 	public ServerStreams(DynamicObjectInputStream ois, ObjectOutputStream oos) {
 		this.objIn = ois;
@@ -23,10 +24,6 @@ public class ServerStreams {
 		this.objIn = ois;
 		this.objOut = oos;
 		this.socket = socket;
-	}
-
-	public InetAddress getLocalIpAddress() {
-		return socket.getLocalAddress();
 	}
 
 	public void send(DataPackage data) throws IOException {
@@ -50,6 +47,10 @@ public class ServerStreams {
 
 	public void addDex(String dexFile, String optDir) {
 		objIn.addDex(dexFile, optDir);
+	}
+
+	public void addDex(File dexFile) {
+		objIn.addDex(dexFile);
 	}
 
 	public void tearDownStream() {

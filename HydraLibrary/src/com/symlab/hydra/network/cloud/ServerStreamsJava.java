@@ -1,4 +1,4 @@
-package com.symlab.hydracloud;
+package com.symlab.hydra.network.cloud;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

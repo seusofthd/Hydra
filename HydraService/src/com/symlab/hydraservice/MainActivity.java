@@ -6,19 +6,22 @@ import java.io.Serializable;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Environment;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
-import android.widget.Spinner;
 import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.Spinner;
 import android.widget.TextView;
 
-import com.symlab.hydra.DandelionHelper;
+import com.symlab.hydra.HydraHelper;
 import com.symlab.hydra.lib.MethodPackage;
 import com.symlab.hydra.lib.OffloadableMethod;
 import com.symlab.hydra.lib.ResultTicket;
+import com.symlab.hydra.lib.TaskQueue;
+import com.symlab.hydra.network.Msg;
+import com.symlab.hydra.status.DeviceStatus;
+import com.symlab.hydra.status.Status;
 import com.symlab.testoffloading.NQueens;
 import com.symlab.testoffloading.Sorting;
 import com.symlab.testoffloading.Sudoku;
@@ -26,9 +29,10 @@ import com.symlab.testoffloading.TestFaceDetection;
 
 public class MainActivity extends Activity {
 
-	private transient DandelionHelper dh;
+	private transient HydraHelper hydraHelper;
 	private TextView tv;
 	private Spinner spinner;
+	private Spinner spinner2;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -44,17 +48,19 @@ public class MainActivity extends Activity {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 				if (isChecked) {
-					dh.startHelping();
+					hydraHelper.startHelping();
 				} else {
-					dh.stopHelping();
+					hydraHelper.stopHelping();
 				}
 
 			}
 
 		});
-		dh = new DandelionHelper(this);
+		hydraHelper = new HydraHelper(this);
 
 		spinner = (Spinner) findViewById(R.id.spinner1);
+		spinner.setSelection(1);
+		spinner2 = (Spinner) findViewById(R.id.spinner2);
 
 		new Thread(new Runnable() {
 			@Override
@@ -65,16 +71,11 @@ public class MainActivity extends Activity {
 					}
 				});
 			}
-
 		}).start();
-
-		// startService(new View(this));
-		// execute(null);
-
 	}
 
 	public void startService(View v) {
-		dh.initializeOHelper();
+		hydraHelper.initializeOHelper();
 		runOnUiThread(new Runnable() {
 			public void run() {
 				clear_screen();
@@ -84,9 +85,9 @@ public class MainActivity extends Activity {
 	}
 
 	public void stopService(View v) {
-		dh.stopHelping();
-		dh.tearDownOHelper();
-		dh.stopOffloadingService();
+		hydraHelper.stopHelping();
+		hydraHelper.tearDownOHelper();
+		hydraHelper.stopOffloadingService();
 	}
 
 	public void execute_ocr(View v) {
@@ -170,298 +171,310 @@ public class MainActivity extends Activity {
 		}
 	}
 
-	PrintStream printStream;
-
-	public void execute(View v) {
-		try {
-//			printStream = new PrintStream(new File("/sdcard/res.csv"));
-			switch (spinner.getSelectedItemPosition()) {
-			case 0:
-				execute_nqueen(v, 8);
-				break;
-			case 1:
-				execute_nqueen(v, 7);
-				break;
-			case 2:
-				execute_sort(v);
-				break;
-			case 3:
-				execute_sudoku(v);
-				break;
-			case 4:
-				execute_face(v, 1);
-				break;
-			case 5:
-				execute_face(v, 5);
-				break;
-			default:
-				break;
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-	}
-
-	public void execute_nqueen(View v, final int n) throws Exception {
-		println(n + "-Queens");
+	public void execute2(final View v) throws Exception {
+		final PrintStream batteryPrintStream = new PrintStream(new File("/sdcard/b.csv"));
 		new Thread() {
+			@Override
 			public void run() {
-
-				for (int i = 0; i < 10; i++) {
-
-					final int num = 1;
-					System.out.println(num + " tasks should be executed.");
-					NQueens subtasks;
-					final ResultTicket rt;
-					final Boolean result;
-					final String classMethodName = Sorting.class.getName() + "#" + "solveNQueens" + "#" + 0 + "#" + 1;
-//					dh.startProfiling(classMethodName);
-					result = true;
-					subtasks = new NQueens();
-					final Class<?>[] paramTypes = { int.class, int.class, int.class };
-					Object[] paramValues = { n, 0, n };
-					final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "solveNQueens", paramTypes, paramValues);
-					final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, Boolean.class);
-					dh.postTask(offloadableMethod);
-					try {
-						synchronized (offloadableMethod) {
-							offloadableMethod.wait();
+				int sec = 0;
+				while (true) {
+					Status status = DeviceStatus.newInstance(MainActivity.this).readStatus();
+					if (sec % 10 == 0) {
+						synchronized (batteryPrintStream) {
+							batteryPrintStream.println(sec + "," + status.batteryPercentage);
 						}
-//						Thread.sleep(140000);
-					} catch (Exception e) {
+						println(sec + "," + status.batteryPercentage);
+						System.out.println("Battery = " + status.batteryPercentage + " %");
+					}
+					try {
+						sec++;
+						sleep(1000);
+					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
-					new Thread() {
-						public void run() {
-							try {
-								runOnUiThread(new Runnable() {
-									public void run() {
-										// System.out.println("result is ready for task "
-										// + methodPackage.id);
-										// println("result is ready for task " +
-										// methodPackage.id);
-										// println("Total RTT = " +
-										// (offloadableMethod.dataPackage.rttDeviceToVM)
-										// / 1000f);
-										// println("RTT (Router to VM/offloadee) = "
-										// +
-										// (offloadableMethod.dataPackage.rttRouterToVM)
-										// / 1000f);
-										// println("RTT (Manager to VM) = " +
-										// (offloadableMethod.dataPackage.rttManagerToVM)
-										// / 1000f);
-										println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-//										printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-									}
-								});
-
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						};
-					}.start();
-					// System.out.println("*** Task submitted ***");
+				}
+			}
+		}.start();
+		new Thread() {
+			public void run() {
+				int count = 1;
+				while (true) {
+					execute_nqueen(v, 7);
+					execute_sort(v);
+					execute_sudoku(v);
+					execute_face(v, 1);
+					execute_nqueen(v, 8);
+					execute_face(v, 5);
+					synchronized (batteryPrintStream) {
+						batteryPrintStream.println("round," + count++);
+					}
 				}
 			};
 		}.start();
+
 	}
 
-	public void execute_sort(View v) throws Exception {
+	PrintStream printStream;
+
+	public void execute(final View v) {
+		new Thread() {
+			@Override
+			public void run() {
+				try {
+					printStream = new PrintStream(new File("/sdcard/res.csv"));
+					switch (spinner.getSelectedItemPosition()) {
+					case 0:
+						execute_nqueen(v, 8);
+						break;
+					case 1:
+						execute_nqueen(v, 7);
+						break;
+					case 2:
+						execute_sort(v);
+						break;
+					case 3:
+						execute_sudoku(v);
+						break;
+					case 4:
+						execute_face(v, 1);
+						break;
+					case 5:
+						execute_face(v, 5);
+						break;
+					default:
+						break;
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}.start();
+	}
+
+	public static Object lock = new Object();
+
+	public void execute_nqueen(View v, final int n) {
+		println(n + "-Queens");
+		// new Thread() {
+		// public void run() {
+		long time = System.currentTimeMillis();
+		for (int i = 0; i < 10; i++) {
+			NQueens subtasks;
+			final ResultTicket rt;
+			final Boolean result;
+			final String classMethodName = Sorting.class.getName() + "#" + "solveNQueens" + "#" + 0 + "#" + 1;
+			// dh.startProfiling(classMethodName);
+			result = true;
+			subtasks = new NQueens();
+			final Class<?>[] paramTypes = { int.class, int.class, int.class };
+			Object[] paramValues = { n, 0, n };
+			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "solveNQueens", paramTypes, paramValues);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, Boolean.class, getOffloadingMethod());
+			hydraHelper.postTask(offloadableMethod);
+
+			try {
+				synchronized (TaskQueue.lock) {
+					TaskQueue.lock.wait();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			final long time2 = System.currentTimeMillis() - time;
+			// System.out.println("total = " + time2);
+			// System.out.println("result is ready for task " +
+			// methodPackage.id);
+			// println("result is ready for task " + methodPackage.id);
+			// println("Total RTT = " +
+			// (offloadableMethod.dataPackage.rttDeviceToVM) / 1000f);
+			// println("RTT (Router to VM/offloadee) = " +
+			// (offloadableMethod.dataPackage.rttRouterToVM) / 1000f);
+			// println("RTT (Manager to VM) = " +
+			// (offloadableMethod.dataPackage.rttManagerToVM) / 1000f);
+			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
+			// final LogRecord log = dh.stopProfiling();
+			// println("total energy=" + log.energyConsumption + " mJ");
+			// println("cpu energy=" + log.cpuEnergy + " mJ");
+			// println("screen energy=" + log.screenEnergy + " mJ");
+			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
+
+			// Profiler.recordTime(log.execDuration);
+			// Profiler.recordEnergy(log.energyConsumption);
+			// System.out.println("*** Task submitted ***");
+		}
+		// };
+		// }.start();
+	}
+
+	public void execute_sort(View v) {
 		println("qSort");
 		final int num = 1;
 		System.out.println(num + " tasks should be executed.");
 
-		new Thread(new Runnable() {
+		// new Thread(new Runnable() {
+		// @Override
+		// public void run() {
 
-			@Override
-			public void run() {
-
-				for (int k = 0; k < 20; k++) {
-					final ResultTicket rt;
-					final Boolean result;
-					final String classMethodName = Sorting.class.getName() + "#" + "qSort" + "#" + 0 + "#" + 1;
-					dh.startProfiling(classMethodName);
-					result = true;
-					Sorting subtasks = new Sorting();
-					final Class<?>[] paramTypes = {};
-					Object[] paramValues = {};
-					final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "qSort", paramTypes, paramValues);
-					final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, void.class);
-					dh.postTask(offloadableMethod);
-					synchronized (offloadableMethod) {
-						try {
-							offloadableMethod.wait();
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
-					new Thread() {
-						public void run() {
-							try {
-								runOnUiThread(new Runnable() {
-									public void run() {
-										// System.out.println("result is ready for task "
-										// + methodPackage.id);
-										// println("result is ready for task " +
-										// methodPackage.id);
-										// println("Total RTT = " +
-										// (offloadableMethod.dataPackage.rttDeviceToVM)
-										// / 1000f);
-										// println("RTT (Router to VM/offloadee) = "
-										// +
-										// (offloadableMethod.dataPackage.rttRouterToVM)
-										// / 1000f);
-										// println("RTT (Manager to VM) = " +
-										// (offloadableMethod.dataPackage.rttManagerToVM)
-										// / 1000f);
-										println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-//										printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-									}
-								});
-
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						};
-					}.start();
+		for (int k = 0; k < 20; k++) {
+			final ResultTicket rt;
+			final Boolean result;
+			final String classMethodName = Sorting.class.getName() + "#" + "qSort" + "#" + 0 + "#" + 1;
+			// dh.startProfiling(classMethodName);
+			result = true;
+			Sorting subtasks = new Sorting();
+			final Class<?>[] paramTypes = {};
+			Object[] paramValues = {};
+			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "qSort", paramTypes, paramValues);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, void.class, getOffloadingMethod());
+			hydraHelper.postTask(offloadableMethod);
+			try {
+				synchronized (TaskQueue.lock) {
+					TaskQueue.lock.wait();
 				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
 			}
-		}).start();
+			// System.out.println("result is ready for task "
+			// + methodPackage.id);
+			// println("result is ready for task " +
+			// methodPackage.id);
+			// println("Total RTT = " +
+			// (offloadableMethod.dataPackage.rttDeviceToVM)
+			// / 1000f);
+			// println("RTT (Router to VM/offloadee) = "
+			// +
+			// (offloadableMethod.dataPackage.rttRouterToVM)
+			// / 1000f);
+			// println("RTT (Manager to VM) = " +
+			// (offloadableMethod.dataPackage.rttManagerToVM)
+			// / 1000f);
+			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
+			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
+		}
+		// }
+		// }).start();
 
 	}
 
-	public void execute_sudoku(View v) throws Exception {
+	public void execute_sudoku(View v) {
 		println("Sudoku");
 		final int num = 1;
 		System.out.println(num + " tasks should be executed.");
 
-		new Thread(new Runnable() {
+		// new Thread(new Runnable() {
+		// @Override
+		// public void run() {
 
-			@Override
-			public void run() {
+		for (int k = 0; k < 20; k++) {
 
-				for (int k = 0; k < 20; k++) {
-
-					final ResultTicket rt;
-					final Boolean result;
-					final String classMethodName = Sorting.class.getName() + "#" + "hasSolution" + "#" + 0 + "#" + 1;
-					dh.startProfiling(classMethodName);
-					result = true;
-					Sudoku subtasks = new Sudoku();
-					final Class<?>[] paramTypes = {};
-					Object[] paramValues = {};
-					final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "hasSolution", paramTypes, paramValues);
-					final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, Boolean.class);
-					dh.postTask(offloadableMethod);
-					synchronized (offloadableMethod) {
-						try {
-							offloadableMethod.wait();
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
-					new Thread() {
-						public void run() {
-							try {
-								runOnUiThread(new Runnable() {
-									public void run() {
-										// System.out.println("result is ready for task "
-										// + methodPackage.id);
-										// println("result is ready for task " +
-										// methodPackage.id);
-										// println("Total RTT = " +
-										// (offloadableMethod.dataPackage.rttDeviceToVM)
-										// / 1000f);
-										// println("RTT (Router to VM/offloadee) = "
-										// +
-										// (offloadableMethod.dataPackage.rttRouterToVM)
-										// / 1000f);
-										// println("RTT (Manager to VM) = " +
-										// (offloadableMethod.dataPackage.rttManagerToVM)
-										// / 1000f);
-										println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-//										printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-									}
-								});
-
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						};
-					}.start();
+			final ResultTicket rt;
+			final Boolean result;
+			final String classMethodName = Sorting.class.getName() + "#" + "hasSolution" + "#" + 0 + "#" + 1;
+			// dh.startProfiling(classMethodName);
+			result = true;
+			Sudoku subtasks = new Sudoku();
+			final Class<?>[] paramTypes = {};
+			Object[] paramValues = {};
+			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "hasSolution", paramTypes, paramValues);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, Boolean.class, getOffloadingMethod());
+			hydraHelper.postTask(offloadableMethod);
+			synchronized (TaskQueue.lock) {
+				try {
+					TaskQueue.lock.wait();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 				}
 			}
-		}).start();
+			// System.out.println("result is ready for task "
+			// + methodPackage.id);
+			// println("result is ready for task " +
+			// methodPackage.id);
+			// println("Total RTT = " +
+			// (offloadableMethod.dataPackage.rttDeviceToVM)
+			// / 1000f);
+			// println("RTT (Router to VM/offloadee) = "
+			// +
+			// (offloadableMethod.dataPackage.rttRouterToVM)
+			// / 1000f);
+			// println("RTT (Manager to VM) = " +
+			// (offloadableMethod.dataPackage.rttManagerToVM)
+			// / 1000f);
+			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
+			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
+		}
+		// }
+		// }).start();
 
 	}
 
-	public void execute_face(View v, final int n) throws Exception {
+	public void execute_face(View v, final int n) {
 		println("FaceDetection " + n);
 		final int num = 1;
-		new Thread(new Runnable() {
+		// new Thread() {
+		// public void run() {
+		long time = System.currentTimeMillis();
+		for (int k = 0; k < 20; k++) {
+			final ResultTicket rt;
+			final Boolean result;
+			final String classMethodName = Sorting.class.getName() + "#" + "detect_faces" + "#" + 0 + "#" + 1;
+			// dh.startProfiling(classMethodName);
+			result = true;
+			TestFaceDetection subtasks = new TestFaceDetection();
+			final Class<?>[] paramTypes = { int.class, int.class };
+			Object[] paramValues = { 20, n };
+			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "detect_faces", paramTypes, paramValues);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, Integer.class, getOffloadingMethod());
+			hydraHelper.postTask(offloadableMethod);
+			try {
+				synchronized (TaskQueue.lock) {
+					TaskQueue.lock.wait();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			final long time2 = System.currentTimeMillis() - time;
+			// System.out.println("result is ready for task "
+			// + methodPackage.id);
+			// println("result is ready for task " +
+			// methodPackage.id);
+			// println("Total RTT = " +
+			// (offloadableMethod.dataPackage.rttDeviceToVM)
+			// / 1000f);
+			// println("RTT (Router to VM/offloadee) = "
+			// +
+			// (offloadableMethod.dataPackage.rttRouterToVM)
+			// / 1000f);
+			// println("RTT (Manager to VM) = " +
+			// (offloadableMethod.dataPackage.rttManagerToVM)
+			// / 1000f);
+			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
+			// println("time = " + time2 / 1000f);
+			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
+		}
+		// };
+		// }.start();
+	}
+
+	private Msg getOffloadingMethod() {
+		switch (spinner2.getSelectedItemPosition()) {
+		case 0:
+			return Msg.LOCAL;
+		case 1:
+			return Msg.CLOUD;
+		case 2:
+			return Msg.SMARTPHONE;
+		case 3:
+			return Msg.GREEDY;
+		}
+		return null;
+	}
+
+	public void println(final String s) {
+		runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				for (int k = 0; k < 20; k++) {
-					final ResultTicket rt;
-					final Boolean result;
-					final String classMethodName = Sorting.class.getName() + "#" + "detect_faces" + "#" + 0 + "#" + 1;
-					dh.startProfiling(classMethodName);
-					result = true;
-					TestFaceDetection subtasks = new TestFaceDetection();
-					final Class<?>[] paramTypes = { int.class, int.class };
-					Object[] paramValues = { 20, n };
-					final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "detect_faces", paramTypes, paramValues);
-					final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, Integer.class);
-					dh.postTask(offloadableMethod);
-					synchronized (offloadableMethod) {
-						try {
-							offloadableMethod.wait();
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
-					new Thread() {
-						public void run() {
-							try {
-								runOnUiThread(new Runnable() {
-									public void run() {
-										// System.out.println("result is ready for task "
-										// + methodPackage.id);
-										// println("result is ready for task " +
-										// methodPackage.id);
-										// println("Total RTT = " +
-										// (offloadableMethod.dataPackage.rttDeviceToVM)
-										// / 1000f);
-										// println("RTT (Router to VM/offloadee) = "
-										// +
-										// (offloadableMethod.dataPackage.rttRouterToVM)
-										// / 1000f);
-										// println("RTT (Manager to VM) = " +
-										// (offloadableMethod.dataPackage.rttManagerToVM)
-										// / 1000f);
-										println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-//										printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-									}
-								});
-
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						};
-					}.start();
-				}
+				tv.setText(s + "\n" + tv.getText());
 			}
-		}).start();
-
-	}
-
-	public void println(String s) {
-		tv.append(s + "\n");
-	}
-
-	public void print(String s) {
-		tv.append(s);
+		});
 	}
 
 	public void clear_screen() {

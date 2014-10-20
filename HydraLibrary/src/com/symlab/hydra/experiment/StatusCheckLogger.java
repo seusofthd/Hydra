@@ -8,15 +8,15 @@ import java.io.IOException;
 import android.os.Environment;
 import android.text.format.Time;
 
-public class Logger {
+public class StatusCheckLogger {
 
 	File logFileDir = Environment.getExternalStorageDirectory();
-	File logFile = new File(logFileDir, "cpuEnergy.txt");
+	File logFile = new File(logFileDir, "sc.txt");
 
 	
 	public static void log(String record) {
 
-		Logger logger = new Logger();
+		StatusCheckLogger logger = new StatusCheckLogger();
 		if (!logger.logFile.exists()) {
 			try {
 				logger.logFile.createNewFile();

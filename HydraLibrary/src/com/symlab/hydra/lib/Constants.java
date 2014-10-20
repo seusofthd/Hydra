@@ -1,6 +1,5 @@
 package com.symlab.hydra.lib;
 
-import com.symlab.hydra.DandelionHelper;
 
 public class Constants {
 	public static int BUFFER = 8192;

@@ -8,26 +8,28 @@ import android.os.Parcelable;
 
 import com.symlab.hydra.db.DatabaseQuery;
 import com.symlab.hydra.network.DataPackage;
+import com.symlab.hydra.network.Msg;
 
 public class OffloadableMethod implements Parcelable {
 
-	public int id;
 	public String appName;
+	public String apkName;
 	public MethodPackage methodPackage;
-//	public ResultTicket resultTicket;
 	public Class<?> reutrnType;
 	public Object result;
 	public DataPackage dataPackage;
+	public Msg offloadingMethod;
 
 	public long execDuration;
 	public long energyConsumption;
 	public long recordQuantity;
 
-	public OffloadableMethod(Context context, String appName, MethodPackage methodPackage, Class<?> reutrnType) {
+	public OffloadableMethod(Context context, String appName, MethodPackage methodPackage, Class<?> reutrnType, Msg offloadingMethod) {
 		this.appName = appName;
 		this.methodPackage = methodPackage;
 //		resultTicket = new ResultTicket(reutrnType);
 		this.reutrnType = reutrnType;
+		this.offloadingMethod = offloadingMethod;
 		// this.resultListener = resultListener;
 		/*
 		 * DatabaseQuery query = new DatabaseQuery(context); String
@@ -42,7 +44,7 @@ public class OffloadableMethod implements Parcelable {
 		 * Long.parseLong(queryString.get(2));
 		 */
 	}
-
+	
 	public void queryMethodInfo(Context context) {
 		DatabaseQuery query = new DatabaseQuery(context);
 		String classMethodName = methodPackage.receiver.getClass().toString() + "#" + methodPackage.methodName;
@@ -90,5 +92,5 @@ public class OffloadableMethod implements Parcelable {
 		energyConsumption = in.readLong();
 		recordQuantity = in.readLong();
 	}
-
+	
 }

@@ -13,5 +13,11 @@
         <item>FaceDetection 1MB</item>
         <item>FaceDetection 0.5MB</item>
     </string-array>
+    <string-array name="sch_list">
+        <item>locally</item>
+        <item>Offload-Cloud</item>
+        <item>Offload-Phone</item>
+        <item>Greedy</item>
+    </string-array>
 
 </resources>

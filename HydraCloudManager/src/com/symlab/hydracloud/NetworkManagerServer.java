@@ -21,12 +21,13 @@ import java.util.concurrent.Future;
 
 import com.symlab.hydra.lib.ByteFile;
 import com.symlab.hydra.lib.Constants;
-import com.symlab.hydra.lib.DynamicObjectInputStream;
 import com.symlab.hydra.lib.MethodPackage;
 import com.symlab.hydra.lib.ResultContainer;
 import com.symlab.hydra.network.DataPackage;
 import com.symlab.hydra.network.Msg;
+import com.symlab.hydra.network.cloud.EC2Instance;
 import com.symlab.hydra.network.cloud.Pack;
+import com.symlab.hydra.network.cloud.ServerStreamsJava;
 import com.symlab.hydra.profilers.Profiler;
 
 public class NetworkManagerServer implements Runnable {
@@ -169,7 +170,7 @@ public class NetworkManagerServer implements Runnable {
 		Pack myPack = null;
 		ServerStreamsJava sstreams = null;
 		Socket socket = null;
-		EC2Instance instance = null;
+		EC2Instance instance = new EC2Instance();
 
 		public Receiving(Socket socket, ServerStreamsJava sstreams) {
 			super();
@@ -350,35 +351,16 @@ public class NetworkManagerServer implements Runnable {
 					// availableInstances.remove(ec2Instance);
 					// }
 					// }
-					instance = new EC2Instance();
 					instance.socket = socket;
 					instance.sstreams = sstreams;
+					EC2Instance ec2Instance = (EC2Instance) receive.deserialize();
+					instance.publicIP = ec2Instance.publicIP;
+					instance.privateIP = ec2Instance.privateIP;
+					instance.ID = ec2Instance.ID;
+					instance.type = ec2Instance.type;
 					availableInstances.add(instance);
-
-					// String instanceID = (String) receive.deserialize();
-					// for (EC2Instance ec2Instance : reservedInstances) {
-					// if (ec2Instance.ID.equalsIgnoreCase(instanceID)) {
-					// instance = ec2Instance;
-					// registerVM(instance, sstreams);
-					// break;
-					// }
-					// }
-					// long avr = 0;
-					// for (int i = 0; i < 10; i++) {
-					// byte[] bytes = new byte[1048576];
-					// DataPackage aa = DataPackage.obtain(Msg.FREE, bytes);
-					// long now = System.currentTimeMillis();
-					// try {
-					// sstreams.send(aa);
-					// } catch (IOException e1) {
-					// e1.printStackTrace();
-					// }
-					// now = System.currentTimeMillis() - now;
-					// avr += now;
-					// System.out.println(now / 1000f);
-					// }
-					// System.out.println("AVR : " + avr / 10000f);
-
+					System.out.println("VM " + instance.ID + " type=" + instance.type + " local-ip=" + instance.privateIP + " pub-ip=" + instance.publicIP +" is registered.");
+					
 					break;
 				case RESULT:
 					System.out.println("Result is received from " + receive.dest + " Sending to Router...");
