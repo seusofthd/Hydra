@@ -105,6 +105,7 @@ public class RouterServer implements Runnable {
 			DynamicObjectInputStream ois = new DynamicObjectInputStream(socketCloud.getInputStream());
 			toCloud = new ServerStreams(ois, oos);
 			workerList.toCloud = toCloud;
+			workerList.toCloud.socket = socketCloud;
 			DataPackage initalMessage = DataPackage.obtain(Msg.SUPPORT_OFFLOAD);
 			toCloud.send(initalMessage);
 			System.out.println("Checking Cloud Support...");
@@ -181,45 +182,19 @@ public class RouterServer implements Runnable {
 					System.out.println("Check Cloud Support : " + connectedToCloud);
 					break;
 				case INIT_OFFLOAD:
-					String hashName = (String) receive.deserialize();
-					// System.out.println("HashName: " + hashName);
-					sentMessage = DataPackage.obtain(Msg.READY);
-					try {
-						toCloud.send(sentMessage);
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
-					System.out.println("Router send messeage: " + Msg.READY);
+					packetQueue.enqueue(receive);
+					break;
+				case APK_REQUEST:
+					packetQueue.enqueue(receive);
 					break;
 				case APK_SEND:
-					ByteFile bf = (ByteFile) receive.deserialize();
-					// Log.e("NodeServer", "1");
-					dexFile = new File(apkFilePath);
-					// Log.e("NodeServer", dexFile.getAbsolutePath());
-					try {
-						FileOutputStream fout = new FileOutputStream(dexFile);
-						// Log.e("NodeServer", "3");
-						BufferedOutputStream bout = new BufferedOutputStream(fout, Constants.BUFFER);
-						// Log.e("NodeServer", "4");
-						bout.write(bf.toByteArray());
-						// Log.e("NodeServer", "5");
-						bout.close();
-						// Log.e("NodeServer", "6");
-						// sstreams.addDex(apkFilePath,
-						// dexOutputDir.getAbsolutePath());
-						// Log.e("NodeServer", "7");
-						sentMessage = DataPackage.obtain(Msg.READY);
-						toCloud.send(sentMessage);
-						// try {
-						// Thread.sleep(10000);
-						// } catch (InterruptedException e) {
-						// e.printStackTrace();
-						// }
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
+					packetQueue.enqueue(receive);
+					break;
+				case READY:
+					packetQueue.enqueue(receive);
 					break;
 				case EXECUTE:
+					packetQueue.enqueue(receive);
 					break;
 				case REQUEST_STATUS:
 					break;
@@ -347,8 +322,6 @@ public class RouterServer implements Runnable {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					break;
-				case OFFLOAD:
 					break;
 				case INIT_OFFLOAD:
 					packetQueue.enqueue(receive);

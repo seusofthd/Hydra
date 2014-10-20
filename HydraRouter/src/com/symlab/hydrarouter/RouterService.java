@@ -35,8 +35,8 @@ public class RouterService extends Service {
 		wakeLock.acquire();
 		routerServer = new RouterServer(workerList, packetQueue);
 		routerServer.startServer();
-		PackageQueueHandler taskQueueHandler = new PackageQueueHandler(routerServer, workerList, packetQueue);
-		packetQueue.addObserver(taskQueueHandler);
+		PackageQueueHandler packageQueueHandler = new PackageQueueHandler(routerServer, workerList, packetQueue);
+		packetQueue.addObserver(packageQueueHandler);
 		return START_STICKY;
 	}
 

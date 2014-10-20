@@ -4,8 +4,11 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
+import android.content.Intent;
+
 import com.symlab.hydra.lib.Constants;
 import com.symlab.hydra.network.cloud.EC2Instance;
+import com.symlab.hydracloud.CloudService;
 
 public class Main {
 
@@ -51,25 +54,16 @@ public class Main {
 	}
 
 	public void RunVMClient() {
-		NetworkManagerClient nm = new NetworkManagerClient();
-		nm.makeconnection();
+//		CloudService cloudService = new CloudService();
+//		cloudService.onCreate();
+//		cloudService.onStart(null, 0);
+		
 	}
 
 	public static void main(String[] args) {
-		if (args.length < 1) {
-			System.out.println("Please enter argument: (manager, client)");
-			return;
-		} else if (args[0].equalsIgnoreCase("manager")) {
-			System.out.println("Running VM Manager...");
-			Main main = new Main();
-//			main.RunVMManager();
-		} else if (args[0].equalsIgnoreCase("client")) {
-			System.out.println("Running VM Client...");
-			Main main = new Main();
-			main.RunVMClient();
-		} else {
-			System.out.println("Bad Argument.");
-		}
+		System.out.println("Running VM Client...");
+		Main main = new Main();
+		main.RunVMClient();
 	}
 
 }

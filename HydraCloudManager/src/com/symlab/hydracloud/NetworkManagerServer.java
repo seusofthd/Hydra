@@ -115,9 +115,6 @@ public class NetworkManagerServer implements Runnable {
 				OutputStream out = mysocket.getOutputStream();
 				ObjectOutputStream oos = new ObjectOutputStream(out);
 				ObjectInputStream ois = new ObjectInputStream(in);
-				// DynamicObjectInputStream ois = new
-				// DynamicObjectInputStream(in,
-				// this.getClass().getClassLoader());
 				toRouter = new ServerStreamsJava(ois, oos);
 				System.out.println("Connection to router established");
 				listener.execute(new Receiving(mysocket, toRouter));
@@ -202,7 +199,6 @@ public class NetworkManagerServer implements Runnable {
 
 		@Override
 		public void run() {
-			// new Thread(sender).start();
 			DataPackage receive = DataPackage.obtain(Msg.NONE);
 			DataPackage sentMessage = null;
 			Long totalExecDuration = null;
@@ -237,100 +233,48 @@ public class NetworkManagerServer implements Runnable {
 					}
 					break;
 				case INIT_OFFLOAD:
-					String hashName = (String) receive.deserialize();
-					// String[] temp = appName_hashCode.split("#");
-					// String appName = temp[0].trim();
-					// long lastModified = Long.parseLong(temp[1].trim());
-					// System.out.println("HashName: " + hashName);
-					// dexOutputDir = context.getDir("dex",
-					// Context.MODE_PRIVATE);
-					// apkFilePath = dexOutputDir.getAbsolutePath() + "/" +
-					// hashName + ".apk";
-					// System.out.println("NodeServer: " + "apkFilePath: " +
-					// apkFilePath);
-					sentMessage = DataPackage.obtain(Msg.READY);
-					try {
-						sstreams.send(sentMessage);
-					} catch (IOException e2) {
-						e2.printStackTrace();
-					}
-					System.out.println("Message " + Msg.READY + " is sent to the Router");
-					// if (apkPresent(apkFilePath)) {
-					// sentMessage = DataPackage.obtain(Msg.READY);
-					// // sstreams.addDex(apkFilePath,
-					// dexOutputDir.getAbsolutePath());
-					// try {
-					// sstreams.send(sentMessage);
-					// } catch (IOException e) {
-					// connectionloss = true;
-					// }
-					// }
-					// else {
-					// sentMessage = DataPackage.obtain(Msg.APK_REQUEST);
-					// try {
-					// sstreams.send(sentMessage);
-					// } catch (IOException e) {
-					// connectionloss = true;
-					// }
-					// }
-					break;
-				case APK_SEND:
-					ByteFile bf = (ByteFile) receive.deserialize();
-					dexFile = new File(apkFilePath);
-					try {
-						FileOutputStream fout = new FileOutputStream(dexFile);
-						BufferedOutputStream bout = new BufferedOutputStream(fout, Constants.BUFFER);
-						bout.write(bf.toByteArray());
-						bout.close();
-						// Log.e("NodeServer", "6");
-						// sstreams.addDex(apkFilePath,
-						// dexOutputDir.getAbsolutePath());
-						// Log.e("NodeServer", "7");
-						sentMessage = DataPackage.obtain(Msg.READY);
-						sstreams.send(sentMessage);
-						// Log.e("NodeServer", "8");
-					} catch (IOException e) {
-
-					}
-					break;
-				case EXECUTE:
 					ServerStreamsJava VMsteams = getAvailableVMstream();
-					// System.out.println("VM is selected. Sending to VM to execute...");
 					receive.rttManagerToVM = System.currentTimeMillis();
-//					for (EC2Instance ec2Instance : availableInstances) {
-//						if (ec2Instance.socket != null && !ec2Instance.socket.isClosed()) {
-							// availableInstances.remove(ec2Instance);
-							// continue;
-//							try {
-//								ec2Instance.sstreams.send(receive);
-//								System.out.println("send to " + ec2Instance.socket.getInetAddress() + " Waiting for results...");
-//							} catch (Exception e) {
-//								e.printStackTrace();
-//							}
-//						}
-//					}
 					 try {
 						VMsteams.send(receive);
 					} catch (IOException e2) {
 						// TODO Auto-generated catch block
 						e2.printStackTrace();
 					}
-
-					// run loclly or remotelly
-					// MethodPackage methodPack = null;
-					// methodPack = (MethodPackage) receive.data;
-					// totalExecDuration = System.nanoTime();
-					// Future<ResultContainer> future = workerPool.submit(new
-					// Worker(methodPack));
-					// pool.execute(new SendResult(future, null,
-					// totalExecDuration));
-
-					// progProfiler = new
-					// ProgramProfiler(methodPack.receiver.getClass().getName()
-					// + "#" + methodPack.methodName);
-					// profiler = new Profiler(context, progProfiler,
-					// devProfiler, btProfiler);
-					// profiler.startExecutionInfoTracking();
+					break;
+				case APK_REQUEST:
+					try {
+						toRouter.send(receive);
+					} catch (IOException e4) {
+						e4.printStackTrace();
+					}
+					break;
+				case APK_SEND:
+					VMsteams = getAvailableVMstream();
+					receive.rttManagerToVM = System.currentTimeMillis();
+					 try {
+						VMsteams.send(receive);
+					} catch (IOException e2) {
+						// TODO Auto-generated catch block
+						e2.printStackTrace();
+					}
+					break;
+				case READY:
+					try {
+						toRouter.send(receive);
+					} catch (IOException e3) {
+						e3.printStackTrace();
+					}
+					break;
+				case EXECUTE:
+					VMsteams = getAvailableVMstream();
+					receive.rttManagerToVM = System.currentTimeMillis();
+					 try {
+						VMsteams.send(receive);
+					} catch (IOException e2) {
+						// TODO Auto-generated catch block
+						e2.printStackTrace();
+					}
 					break;
 				case REQUEST_STATUS:
 					// try {

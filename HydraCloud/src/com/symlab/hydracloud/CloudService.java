@@ -1,4 +1,4 @@
-package hk.ust.symlab.hydra.network.cloud;
+package com.symlab.hydracloud;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -15,12 +15,18 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import android.app.Service;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Binder;
+import android.os.IBinder;
+import android.util.Log;
 
 import com.symlab.hydra.lib.ByteFile;
 import com.symlab.hydra.lib.Constants;
@@ -35,16 +41,41 @@ import com.symlab.hydra.network.cloud.EC2Instance;
 import com.symlab.hydra.network.cloud.Pack;
 import com.symlab.hydra.profilers.Profiler;
 
-public class NetworkManagerClient implements Runnable {
+public class CloudService extends Service implements Runnable {
+	private final IBinder mBinder = new MyBinder();
 	ServerSocket serversoc = null;
 	private ExecutorService workerPool;
 	private ExecutorService pool;
-	private ExecutorService listener;
 
-	public NetworkManagerClient() {
+	public class MyBinder extends Binder {
+		CloudService getService() {
+			return CloudService.this;
+		}
+	}
+
+	@Override
+	public IBinder onBind(Intent intent) {
+		return mBinder;
+	}
+	
+	Context context;
+	public CloudService(Context context) {
+		this.context = context;
+		System.out.println("constructor");
 		workerPool = Executors.newCachedThreadPool();
 		pool = Executors.newCachedThreadPool();
-		listener = Executors.newCachedThreadPool();
+	}
+	
+	@Override
+	public void onCreate() {
+		System.out.println("in service on create");
+	}
+
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		System.out.println("in service on start command");
+		makeconnection();
+		return Service.START_STICKY;
 	}
 
 	private EC2Instance getEC2Information() {
@@ -74,7 +105,6 @@ public class NetworkManagerClient implements Runnable {
 	public boolean makeconnection() {
 		while (true) {
 			try {
-
 				System.out.println("trying to connect to " + Constants.VM0_IP_PRV + ":" + Constants.VM_PORT);
 				socket = new Socket();
 				socket.connect(new InetSocketAddress(Constants.VM0_IP_PRV, Constants.VM_PORT), 10000);
@@ -88,7 +118,7 @@ public class NetworkManagerClient implements Runnable {
 				DataPackage dataPackage = DataPackage.obtain(Msg.REG_VM, ec2Instance);
 				sstreams.send(dataPackage);
 				System.out.println("connection to " + Constants.VM0_IP_PRV + ":" + Constants.VM_PORT + " established");
-				listener.execute(this);
+				pool.execute(this);
 				return true;
 			} catch (Exception ex) {
 				try {
@@ -113,13 +143,8 @@ public class NetworkManagerClient implements Runnable {
 	public void run() {
 		DataPackage receive = DataPackage.obtain(Msg.NONE);
 		DataPackage sentMessage = null;
-		// ProgramProfiler progProfiler = new ProgramProfiler();
-		// DeviceProfiler devProfiler = new DeviceProfiler(context);
-		// Profiler profiler = new Profiler(context, progProfiler,
-		// devProfiler);
 		Long totalExecDuration = null;
 		String apkFilePath = "";
-		File dexOutputDir = null;
 		File dexFile = null;
 		boolean connectionloss = false;
 		while (!connectionloss && receive != null) {
@@ -130,13 +155,10 @@ public class NetworkManagerClient implements Runnable {
 				connectionloss = true;
 				break;
 			}
-			// if (connectionloss || receive == null) {
-			// sentMessage = DataPackage.obtain(Msg.FREE,
-			// toRouter.myId);
-			// toRouter.send(sentMessage);
-			// break;
-			// }
 			switch (receive.what) {
+			case REG_VM:
+				System.out.println("receive REG_VM");
+				break;
 			case PING:
 				sentMessage = DataPackage.obtain(Msg.PONG);
 				try {
@@ -157,89 +179,46 @@ public class NetworkManagerClient implements Runnable {
 				break;
 			case INIT_OFFLOAD:
 				String hashName = (String) receive.deserialize();
-				// String[] temp = appName_hashCode.split("#");
-				// String appName = temp[0].trim();
-				// long lastModified = Long.parseLong(temp[1].trim());
-				// System.out.println("NodeServer: " + "HashName: " +
-				// hashName);
-				// dexOutputDir = context.getDir("dex",
-				// Context.MODE_PRIVATE);
-				// apkFilePath = dexOutputDir.getAbsolutePath() + "/" +
-				// hashName + ".apk";
-				// System.out.println("NodeServer: " + "apkFilePath: " +
-				// apkFilePath);
-				sentMessage = DataPackage.obtain(Msg.READY);
-				try {
-					sstreams.send(sentMessage);
-				} catch (IOException e1) {
-					e1.printStackTrace();
+				Log.d("NodeServer", "HashName***" + hashName);
+				File dexOutputDir = context.getDir("dex", Context.MODE_PRIVATE);
+				apkFilePath = dexOutputDir.getAbsolutePath() + "/" + hashName + ".apk";
+				Log.d("NodeServer", "apkFilePath: " + apkFilePath);
+				if (new File(apkFilePath).exists()) {
+					receive.what = Msg.READY;
+					try {
+						sstreams.send(receive);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				} else {
+					receive.what = Msg.APK_REQUEST;
+					try {
+						sstreams.send(receive);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				}
-				// if (apkPresent(apkFilePath)) {
-				// sentMessage = DataPackage.obtain(Msg.READY);
-				// // sstreams.addDex(apkFilePath,
-				// dexOutputDir.getAbsolutePath());
-				// try {
-				// sstreams.send(sentMessage);
-				// } catch (IOException e) {
-				// connectionloss = true;
-				// }
-				// }
-				// else {
-				// sentMessage = DataPackage.obtain(Msg.APK_REQUEST);
-				// try {
-				// sstreams.send(sentMessage);
-				// } catch (IOException e) {
-				// connectionloss = true;
-				// }
-				// }
 				break;
 			case APK_SEND:
 				ByteFile bf = (ByteFile) receive.deserialize();
-				// Log.e("NodeServer", "1");
 				dexFile = new File(apkFilePath);
-				// Log.e("NodeServer", dexFile.getAbsolutePath());
 				try {
 					FileOutputStream fout = new FileOutputStream(dexFile);
-					// Log.e("NodeServer", "3");
 					BufferedOutputStream bout = new BufferedOutputStream(fout, Constants.BUFFER);
-					// Log.e("NodeServer", "4");
 					bout.write(bf.toByteArray());
-					// Log.e("NodeServer", "5");
 					bout.close();
-					// Log.e("NodeServer", "6");
-					// sstreams.addDex(apkFilePath,
-					// dexOutputDir.getAbsolutePath());
-					// Log.e("NodeServer", "7");
-					sentMessage = DataPackage.obtain(Msg.READY);
-					sstreams.send(sentMessage);
-					// Log.e("NodeServer", "8");
+					sstreams.addDex(dexFile);
+					receive.what = Msg.READY;
+					sstreams.send(receive);
 				} catch (IOException e) {
 
 				}
 				break;
 			case EXECUTE:
-				MethodPackage methodPack = (MethodPackage) receive.deserialize();
-
-				// progProfiler = new
-				// ProgramProfiler(methodPack.receiver.getClass().getName()
-				// + "#" + methodPack.methodName);
-				// profiler = new Profiler(context, progProfiler,
-				// devProfiler, btProfiler);
-				// totalExecDuration = System.;
-				// profiler.startExecutionInfoTracking();
+				MethodPackage methodPack = null;
+				methodPack = (MethodPackage) receive.deserialize();
 				Future<ResultContainer> future = workerPool.submit(new Worker(methodPack));
 				pool.execute(new SendResult(future, null, receive));
-				break;
-			case REQUEST_STATUS:
-				// try {
-				// sstreams.send(DataPackage.obtain(Msg.RESPONSE_STATUS,
-				// DeviceStatus.newInstance(context).readStatus()));
-				// } catch (IOException e) {
-				// connectionloss = true;
-				// }
-				break;
-			case REG_VM:
-				System.out.println("receive REG_VM");
 				break;
 			}
 
@@ -272,9 +251,7 @@ public class NetworkManagerClient implements Runnable {
 				Method method = methodPack.receiver.getClass().getDeclaredMethod(methodPack.methodName, methodPack.paraTypes);
 				method.setAccessible(true);
 				Long startExecTime = System.currentTimeMillis();
-				System.out.println("before invoke");
 				result = method.invoke(methodPack.receiver, methodPack.paraValues);
-				System.out.println("after invoke");
 				execDuration = System.currentTimeMillis() - startExecTime;
 				System.out.println("Pure Execution time (including invokation) = " + execDuration / 1000f);
 				ret = new ResultContainer(false, methodPack.receiver, result, execDuration, 0L, methodPack.id);
@@ -330,7 +307,6 @@ public class NetworkManagerClient implements Runnable {
 			} catch (ExecutionException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

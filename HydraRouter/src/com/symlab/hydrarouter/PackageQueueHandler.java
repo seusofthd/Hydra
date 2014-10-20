@@ -132,13 +132,13 @@ public class PackageQueueHandler implements Observer {
 	}
 
 	private void send(DataPackage dp, InetAddress ip) {
-		if (dp.destination == Msg.CLOUD) {
+		if (ip.equals(workerList.toCloud.socket.getInetAddress())) {
 			try {
 				workerList.toCloud.send(dp);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		} else if (dp.destination == Msg.SMARTPHONE) {
+		} else {
 			for (Device d : workerList.devices) {
 				if (d.ip.equals(ip)) {
 

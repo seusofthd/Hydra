@@ -61,6 +61,7 @@ public class DataPackage implements Serializable {
 				dataByte[i] = dataByte2[i];
 			}
 		} catch (IOException e) {
+			dataByte = new Byte[1];
 			e.printStackTrace();
 		}
 		return dataByte;
