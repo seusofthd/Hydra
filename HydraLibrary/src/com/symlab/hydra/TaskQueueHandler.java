@@ -67,20 +67,17 @@ public class TaskQueueHandler implements Observer {
 		}
 	}
 
-	boolean remotely = true;
 
 	public void execute(OffloadableMethod offloadableMethod) {
 		Object result = null;
 		try {
-			if (remotely && toRouter.streams != null) {
+			if (offloadableMethod.offloadingMethod!=Msg.LOCAL && toRouter.streams != null) {
 				System.out.println("Executing Remotely ...");
 				try {
 					sendAndExecute(offloadableMethod);
 				} catch (RemoteNodeException e) {
-					remotely = false;
 					executeLocally(offloadableMethod);
 				} catch (OffloadingNetworkException e) {
-					remotely = false;
 					executeLocally(offloadableMethod);
 				} catch (Exception e) {
 					e.printStackTrace();
