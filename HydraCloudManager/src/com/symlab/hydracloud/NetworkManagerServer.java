@@ -1,8 +1,6 @@
 package com.symlab.hydracloud;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -19,15 +17,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import com.symlab.hydra.lib.ByteFile;
 import com.symlab.hydra.lib.Constants;
 import com.symlab.hydra.lib.MethodPackage;
 import com.symlab.hydra.lib.ResultContainer;
 import com.symlab.hydra.network.DataPackage;
+import com.symlab.hydra.network.EC2Instance;
 import com.symlab.hydra.network.Msg;
-import com.symlab.hydra.network.cloud.EC2Instance;
+import com.symlab.hydra.network.ServerStreams;
 import com.symlab.hydra.network.cloud.Pack;
-import com.symlab.hydra.network.cloud.ServerStreamsJava;
 import com.symlab.hydra.profilers.Profiler;
 
 public class NetworkManagerServer implements Runnable {
@@ -83,7 +80,7 @@ public class NetworkManagerServer implements Runnable {
 		reservedInstances.add(instance);
 	}
 
-	private void registerVM(EC2Instance instance, ServerStreamsJava sstreams) {
+	private void registerVM(EC2Instance instance, ServerStreams sstreams) {
 		instance.sstreams = sstreams;
 		reservedInstances.remove(instance);
 		availableInstances.add(instance);
@@ -115,7 +112,7 @@ public class NetworkManagerServer implements Runnable {
 				OutputStream out = mysocket.getOutputStream();
 				ObjectOutputStream oos = new ObjectOutputStream(out);
 				ObjectInputStream ois = new ObjectInputStream(in);
-				toRouter = new ServerStreamsJava(ois, oos);
+				toRouter = new ServerStreams(ois, oos);
 				System.out.println("Connection to router established");
 				listener.execute(new Receiving(mysocket, toRouter));
 			} catch (Exception ex) {
@@ -129,7 +126,7 @@ public class NetworkManagerServer implements Runnable {
 		}
 	}
 
-	ServerStreamsJava toRouter;
+	ServerStreams toRouter;
 
 	@Override
 	public void run() {
@@ -150,7 +147,7 @@ public class NetworkManagerServer implements Runnable {
 				OutputStream out = mysocket.getOutputStream();
 				ObjectOutputStream oos = new ObjectOutputStream(out);
 				ObjectInputStream ois = new ObjectInputStream(in);
-				ServerStreamsJava vmStreams = new ServerStreamsJava(ois, oos);
+				ServerStreams vmStreams = new ServerStreams(ois, oos);
 				System.out.println("Connection to VM " + mysocket.getInetAddress().toString() + " established");
 				listener.execute(new Receiving(mysocket, vmStreams));
 			} catch (Exception ex) {
@@ -165,11 +162,11 @@ public class NetworkManagerServer implements Runnable {
 		Object state = null;
 		Class stateDType = null;
 		Pack myPack = null;
-		ServerStreamsJava sstreams = null;
+		ServerStreams sstreams = null;
 		Socket socket = null;
 		EC2Instance instance = new EC2Instance();
 
-		public Receiving(Socket socket, ServerStreamsJava sstreams) {
+		public Receiving(Socket socket, ServerStreams sstreams) {
 			super();
 			this.sstreams = sstreams;
 			this.socket = socket;
@@ -233,9 +230,9 @@ public class NetworkManagerServer implements Runnable {
 					}
 					break;
 				case INIT_OFFLOAD:
-					ServerStreamsJava VMsteams = getAvailableVMstream();
+					ServerStreams VMsteams = getAvailableVMstream();
 					receive.rttManagerToVM = System.currentTimeMillis();
-					 try {
+					try {
 						VMsteams.send(receive);
 					} catch (IOException e2) {
 						// TODO Auto-generated catch block
@@ -252,7 +249,7 @@ public class NetworkManagerServer implements Runnable {
 				case APK_SEND:
 					VMsteams = getAvailableVMstream();
 					receive.rttManagerToVM = System.currentTimeMillis();
-					 try {
+					try {
 						VMsteams.send(receive);
 					} catch (IOException e2) {
 						// TODO Auto-generated catch block
@@ -269,7 +266,7 @@ public class NetworkManagerServer implements Runnable {
 				case EXECUTE:
 					VMsteams = getAvailableVMstream();
 					receive.rttManagerToVM = System.currentTimeMillis();
-					 try {
+					try {
 						VMsteams.send(receive);
 					} catch (IOException e2) {
 						// TODO Auto-generated catch block
@@ -278,7 +275,7 @@ public class NetworkManagerServer implements Runnable {
 					break;
 				case REQUEST_STATUS:
 					// try {
-					// sstreams.send(DataPackage.obtain(Msg.RESPONSE_STATUS,
+					// sstreams.send(DataPackageAbstract.obtain(Msg.RESPONSE_STATUS,
 					// DeviceStatus.newInstance(context).readStatus()));
 					// } catch (IOException e) {
 					// connectionloss = true;
@@ -303,8 +300,8 @@ public class NetworkManagerServer implements Runnable {
 					instance.ID = ec2Instance.ID;
 					instance.type = ec2Instance.type;
 					availableInstances.add(instance);
-					System.out.println("VM " + instance.ID + " type=" + instance.type + " local-ip=" + instance.privateIP + " pub-ip=" + instance.publicIP +" is registered.");
-					
+					System.out.println("VM " + instance.ID + " type=" + instance.type + " local-ip=" + instance.privateIP + " pub-ip=" + instance.publicIP + " is registered.");
+
 					break;
 				case RESULT:
 					System.out.println("Result is received from " + receive.dest + " Sending to Router...");
@@ -335,7 +332,7 @@ public class NetworkManagerServer implements Runnable {
 			return;
 		};
 
-		private ServerStreamsJava getAvailableVMstream() {
+		private ServerStreams getAvailableVMstream() {
 			for (int i = 1; i < availableInstances.size(); i++) {
 				if (availableInstances.get(i).sstreams != null) {
 					return availableInstances.get(i).sstreams;
@@ -437,7 +434,7 @@ public class NetworkManagerServer implements Runnable {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					// sentMessage = DataPackage.obtain(Msg.FREE,
+					// sentMessage = DataPackageAbstract.obtain(Msg.FREE,
 					// toRouter.myId);
 					// toRouter.send(sentMessage);
 					// profiler.stopAndLogExecutionInfoTracking(totalExecDuration,

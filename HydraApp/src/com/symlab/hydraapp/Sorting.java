@@ -1,8 +1,8 @@
-package com.symlab.testoffloading;
+package com.symlab.hydraapp;
 
-import com.symlab.hydra.lib.Offloadable;
+import java.io.Serializable;
 
-public class Sorting extends Offloadable {
+public class Sorting  implements Serializable {
 	
 	private static final long serialVersionUID = 434193638395877253L;
 	
@@ -73,12 +73,5 @@ public class Sorting extends Offloadable {
 		return arr;
 	}
 
-
-	@Override
-	public void copyState(Offloadable state) {
-		Sorting temp = (Sorting) state;
-		this.arr = temp.arr;
-		//this.array = null;
-	}
 
 }

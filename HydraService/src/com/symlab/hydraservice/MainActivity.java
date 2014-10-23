@@ -5,7 +5,9 @@ import java.io.PrintStream;
 import java.io.Serializable;
 
 import android.app.Activity;
+import android.content.Context;
 import android.os.Bundle;
+import android.os.Environment;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.CheckBox;
@@ -17,15 +19,11 @@ import android.widget.TextView;
 import com.symlab.hydra.HydraHelper;
 import com.symlab.hydra.lib.MethodPackage;
 import com.symlab.hydra.lib.OffloadableMethod;
-import com.symlab.hydra.lib.ResultTicket;
-import com.symlab.hydra.lib.TaskQueue;
 import com.symlab.hydra.network.Msg;
 import com.symlab.hydra.status.DeviceStatus;
 import com.symlab.hydra.status.Status;
-import com.symlab.testoffloading.NQueens;
-import com.symlab.testoffloading.Sorting;
-import com.symlab.testoffloading.Sudoku;
-import com.symlab.testoffloading.TestFaceDetection;
+
+import dalvik.system.DexClassLoader;
 
 public class MainActivity extends Activity {
 
@@ -61,27 +59,12 @@ public class MainActivity extends Activity {
 		spinner = (Spinner) findViewById(R.id.spinner1);
 		spinner.setSelection(1);
 		spinner2 = (Spinner) findViewById(R.id.spinner2);
-
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				runOnUiThread(new Runnable() {
-					public void run() {
-						println("Hydra");
-					}
-				});
-			}
-		}).start();
+		println("Hydra");
 	}
 
 	public void startService(View v) {
 		hydraHelper.initializeOHelper();
-		runOnUiThread(new Runnable() {
-			public void run() {
-				clear_screen();
-				println("service is started");
-			}
-		});
+		println("service is started");
 	}
 
 	public void stopService(View v) {
@@ -117,7 +100,7 @@ public class MainActivity extends Activity {
 				// (Math.random() * 100000), AndroidOCR.cameraListener,
 				// "ocrCall", paramTypes, paramValues);
 				// final OffloadableMethod offloadableMethod = new
-				// OffloadableMethod(MainActivity.this, getPackageName(),
+				// OffloadableMethod(MainActivity.this, apkPath,
 				// methodPackage, returnTypes);
 				// offloadableMethod.dataPackage = null;
 				// if (AndroidOCR.sbitMap != null && AndroidOCR.sbitMap.bitmap
@@ -251,207 +234,136 @@ public class MainActivity extends Activity {
 		}.start();
 	}
 
-	public static Object lock = new Object();
-
 	public void execute_nqueen(View v, final int n) {
 		println(n + "-Queens");
-		// new Thread() {
-		// public void run() {
-		long time = System.currentTimeMillis();
 		for (int i = 0; i < 10; i++) {
-			NQueens subtasks;
-			final ResultTicket rt;
+			Object obj = null;
+			String apkPath = Environment.getExternalStorageDirectory().getPath() + "/Hydra/hydraApp.apk";
+			try {
+				DexClassLoader dexClassLoader = new DexClassLoader(apkPath, getDir("dex", Context.MODE_PRIVATE).getAbsolutePath(), null, getClassLoader());
+				Class<?> classToLoad = dexClassLoader.loadClass("com.symlab.hydraapp.NQueens");
+				obj = classToLoad.newInstance();
+				final String classMethodName = classToLoad.getName() + "#" + "solveNQueens" + "#" + 0 + "#" + 1;
+				// dh.startProfiling(classMethodName);
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
 			final Boolean result;
-			final String classMethodName = Sorting.class.getName() + "#" + "solveNQueens" + "#" + 0 + "#" + 1;
-			// dh.startProfiling(classMethodName);
 			result = true;
-			subtasks = new NQueens();
 			final Class<?>[] paramTypes = { int.class, int.class, int.class };
 			Object[] paramValues = { n, 0, n };
-			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "solveNQueens", paramTypes, paramValues);
-			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, Boolean.class, getOffloadingMethod());
+			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), obj, "solveNQueens", paramTypes, paramValues);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, apkPath, methodPackage, Boolean.class, getOffloadingMethod());
 			hydraHelper.postTask(offloadableMethod);
-
 			try {
-				synchronized (TaskQueue.lock) {
-					TaskQueue.lock.wait();
+				synchronized (offloadableMethod) {
+					offloadableMethod.wait();
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			final long time2 = System.currentTimeMillis() - time;
-			// System.out.println("total = " + time2);
-			// System.out.println("result is ready for task " +
-			// methodPackage.id);
-			// println("result is ready for task " + methodPackage.id);
-			// println("Total RTT = " +
-			// (offloadableMethod.dataPackage.rttDeviceToVM) / 1000f);
-			// println("RTT (Router to VM/offloadee) = " +
-			// (offloadableMethod.dataPackage.rttRouterToVM) / 1000f);
-			// println("RTT (Manager to VM) = " +
-			// (offloadableMethod.dataPackage.rttManagerToVM) / 1000f);
-			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-			// final LogRecord log = dh.stopProfiling();
-			// println("total energy=" + log.energyConsumption + " mJ");
-			// println("cpu energy=" + log.cpuEnergy + " mJ");
-			// println("screen energy=" + log.screenEnergy + " mJ");
-			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-
-			// Profiler.recordTime(log.execDuration);
-			// Profiler.recordEnergy(log.energyConsumption);
-			// System.out.println("*** Task submitted ***");
+			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.execDuration) / 1000f);
+			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.execDuration) / 1000f);
 		}
-		// };
-		// }.start();
 	}
 
 	public void execute_sort(View v) {
 		println("qSort");
-		final int num = 1;
-		System.out.println(num + " tasks should be executed.");
-
-		// new Thread(new Runnable() {
-		// @Override
-		// public void run() {
-
 		for (int k = 0; k < 20; k++) {
-			final ResultTicket rt;
+			Object obj = null;
+			String apkPath = Environment.getExternalStorageDirectory().getPath() + "/Hydra/hydraApp.apk";
+			try {
+				DexClassLoader dexClassLoader = new DexClassLoader(apkPath, getDir("dex", Context.MODE_PRIVATE).getAbsolutePath(), null, getClassLoader());
+				Class<?> classToLoad = dexClassLoader.loadClass("com.symlab.hydraapp.Sorting");
+				obj = classToLoad.newInstance();
+				final String classMethodName = classToLoad.getName() + "#" + "qSort" + "#" + 0 + "#" + 1;
+				// dh.startProfiling(classMethodName);
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
 			final Boolean result;
-			final String classMethodName = Sorting.class.getName() + "#" + "qSort" + "#" + 0 + "#" + 1;
-			// dh.startProfiling(classMethodName);
 			result = true;
-			Sorting subtasks = new Sorting();
 			final Class<?>[] paramTypes = {};
 			Object[] paramValues = {};
-			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "qSort", paramTypes, paramValues);
-			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, void.class, getOffloadingMethod());
+			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), obj, "qSort", paramTypes, paramValues);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, apkPath, methodPackage, void.class, getOffloadingMethod());
 			hydraHelper.postTask(offloadableMethod);
 			try {
-				synchronized (TaskQueue.lock) {
-					TaskQueue.lock.wait();
-				}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			// System.out.println("result is ready for task "
-			// + methodPackage.id);
-			// println("result is ready for task " +
-			// methodPackage.id);
-			// println("Total RTT = " +
-			// (offloadableMethod.dataPackage.rttDeviceToVM)
-			// / 1000f);
-			// println("RTT (Router to VM/offloadee) = "
-			// +
-			// (offloadableMethod.dataPackage.rttRouterToVM)
-			// / 1000f);
-			// println("RTT (Manager to VM) = " +
-			// (offloadableMethod.dataPackage.rttManagerToVM)
-			// / 1000f);
-			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-		}
-		// }
-		// }).start();
-
-	}
-
-	public void execute_sudoku(View v) {
-		println("Sudoku");
-		final int num = 1;
-		System.out.println(num + " tasks should be executed.");
-
-		// new Thread(new Runnable() {
-		// @Override
-		// public void run() {
-
-		for (int k = 0; k < 20; k++) {
-
-			final ResultTicket rt;
-			final Boolean result;
-			final String classMethodName = Sorting.class.getName() + "#" + "hasSolution" + "#" + 0 + "#" + 1;
-			// dh.startProfiling(classMethodName);
-			result = true;
-			Sudoku subtasks = new Sudoku();
-			final Class<?>[] paramTypes = {};
-			Object[] paramValues = {};
-			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "hasSolution", paramTypes, paramValues);
-			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, Boolean.class, getOffloadingMethod());
-			hydraHelper.postTask(offloadableMethod);
-			synchronized (TaskQueue.lock) {
-				try {
-					TaskQueue.lock.wait();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-			// System.out.println("result is ready for task "
-			// + methodPackage.id);
-			// println("result is ready for task " +
-			// methodPackage.id);
-			// println("Total RTT = " +
-			// (offloadableMethod.dataPackage.rttDeviceToVM)
-			// / 1000f);
-			// println("RTT (Router to VM/offloadee) = "
-			// +
-			// (offloadableMethod.dataPackage.rttRouterToVM)
-			// / 1000f);
-			// println("RTT (Manager to VM) = " +
-			// (offloadableMethod.dataPackage.rttManagerToVM)
-			// / 1000f);
-			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-		}
-		// }
-		// }).start();
-
-	}
-
-	public void execute_face(View v, final int n) {
-		println("FaceDetection " + n);
-		final int num = 1;
-		// new Thread() {
-		// public void run() {
-		long time = System.currentTimeMillis();
-		for (int k = 0; k < 20; k++) {
-			final ResultTicket rt;
-			final Boolean result;
-			final String classMethodName = Sorting.class.getName() + "#" + "detect_faces" + "#" + 0 + "#" + 1;
-			// dh.startProfiling(classMethodName);
-			result = true;
-			TestFaceDetection subtasks = new TestFaceDetection();
-			final Class<?>[] paramTypes = { int.class, int.class };
-			Object[] paramValues = { 20, n };
-			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), subtasks, "detect_faces", paramTypes, paramValues);
-			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), methodPackage, Integer.class, getOffloadingMethod());
-			hydraHelper.postTask(offloadableMethod);
-			try {
-				synchronized (TaskQueue.lock) {
-					TaskQueue.lock.wait();
+				synchronized (offloadableMethod) {
+					offloadableMethod.wait();
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			final long time2 = System.currentTimeMillis() - time;
-			// System.out.println("result is ready for task "
-			// + methodPackage.id);
-			// println("result is ready for task " +
-			// methodPackage.id);
-			// println("Total RTT = " +
-			// (offloadableMethod.dataPackage.rttDeviceToVM)
-			// / 1000f);
-			// println("RTT (Router to VM/offloadee) = "
-			// +
-			// (offloadableMethod.dataPackage.rttRouterToVM)
-			// / 1000f);
-			// println("RTT (Manager to VM) = " +
-			// (offloadableMethod.dataPackage.rttManagerToVM)
-			// / 1000f);
-			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
-			// println("time = " + time2 / 1000f);
-			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.dataPackage.pureExecTime) / 1000f);
+			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.execDuration) / 1000f);
+			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.execDuration) / 1000f);
 		}
-		// };
-		// }.start();
+	}
+
+	public void execute_sudoku(View v) {
+		println("Sudoku");
+		for (int k = 0; k < 20; k++) {
+			Object obj = null;
+			String apkPath = Environment.getExternalStorageDirectory().getPath() + "/Hydra/hydraApp.apk";
+			try {
+				DexClassLoader dexClassLoader = new DexClassLoader(apkPath, getDir("dex", Context.MODE_PRIVATE).getAbsolutePath(), null, getClassLoader());
+				Class<?> classToLoad = dexClassLoader.loadClass("com.symlab.hydraapp.Sudoku");
+				obj = classToLoad.newInstance();
+				final String classMethodName = classToLoad.getName() + "#" + "hasSolution" + "#" + 0 + "#" + 1;
+				// dh.startProfiling(classMethodName);
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
+			final Boolean result;
+			result = true;
+			final Class<?>[] paramTypes = {};
+			Object[] paramValues = {};
+			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), obj, "hasSolution", paramTypes, paramValues);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, apkPath, methodPackage, Boolean.class, getOffloadingMethod());
+			hydraHelper.postTask(offloadableMethod);
+			try {
+				synchronized (offloadableMethod) {
+					offloadableMethod.wait();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.execDuration) / 1000f);
+			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.execDuration) / 1000f);
+		}
+	}
+
+	public void execute_face(View v, final int n) {
+		println("FaceDetection " + n);
+		for (int k = 0; k < 20; k++) {
+			Object obj = null;
+			String apkPath = Environment.getExternalStorageDirectory().getPath() + "/Hydra/hydraApp.apk";
+			try {
+				DexClassLoader dexClassLoader = new DexClassLoader(apkPath, getDir("dex", Context.MODE_PRIVATE).getAbsolutePath(), null, getClassLoader());
+				Class<?> classToLoad = dexClassLoader.loadClass("com.symlab.hydraapp.FaceDetection");
+				obj = classToLoad.newInstance();
+				final String classMethodName = classToLoad.getName() + "#" + "detect_faces" + "#" + 0 + "#" + 1;
+				// dh.startProfiling(classMethodName);
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
+			final Boolean result;
+			result = true;
+			final Class<?>[] paramTypes = { int.class, int.class };
+			Object[] paramValues = { 20, n };
+			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), obj, "detect_faces", paramTypes, paramValues);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, apkPath, methodPackage, Integer.class, getOffloadingMethod());
+			hydraHelper.postTask(offloadableMethod);
+			try {
+				synchronized (offloadableMethod) {
+					offloadableMethod.wait();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			println(offloadableMethod.dataPackage.dest + " \ttime = " + (offloadableMethod.execDuration) / 1000f);
+			printStream.println(offloadableMethod.dataPackage.dest + "," + (offloadableMethod.execDuration) / 1000f);
+		}
 	}
 
 	private Msg getOffloadingMethod() {
@@ -469,16 +381,32 @@ public class MainActivity extends Activity {
 	}
 
 	public void println(final String s) {
-		runOnUiThread(new Runnable() {
+		new Thread() {
 			@Override
 			public void run() {
-				tv.setText(s + "\n" + tv.getText());
+				runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						tv.setText(s + "\n" + tv.getText());
+					}
+				});
 			}
-		});
+		}.start();
+
 	}
 
 	public void clear_screen() {
-		tv.setText("");
+		new Thread() {
+			@Override
+			public void run() {
+				runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						tv.setText("");
+					}
+				});
+			}
+		}.start();
 	}
 
 }

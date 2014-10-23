@@ -22,11 +22,12 @@ public class ResultContainer implements Serializable {
 	}
 
 	public ResultContainer(boolean failed, Object caller, Object result, Long duration, Long consumption, int id) {
-		isExceptionOrError = failed;
+		this.isExceptionOrError = failed;
 		this.caller = caller;
 		this.result = result;
-		pureExecutionDuration = duration;
-		energyConsumption = consumption;
+		this.pureExecutionDuration = duration;
+		this.energyConsumption = consumption;
+		this.id = id;
 	}
 
 	public void setResult(boolean failed, Object caller, Object result, Long duration, Long consumption) {

@@ -45,11 +45,11 @@ public class OffloadingService extends Service {
 
 		@Override
 		public void addTaskToQueue(OffloadableMethod offloadableMethod) throws RemoteException {
-			try {
-				offloadableMethod.apkName = getPackageManager().getApplicationInfo(offloadableMethod.appName, 0).sourceDir;
-			} catch (NameNotFoundException e) {
-				e.printStackTrace();
-			}
+//			try {
+//				offloadableMethod.apkName = getPackageManager().getApplicationInfo(offloadableMethod.appName, 0).sourceDir;
+//			} catch (NameNotFoundException e) {
+//				e.printStackTrace();
+//			}
 			taskQueue.enqueue(offloadableMethod);
 		}
 

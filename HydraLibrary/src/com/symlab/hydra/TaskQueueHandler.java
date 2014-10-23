@@ -45,17 +45,12 @@ public class TaskQueueHandler implements Observer {
 	private TaskQueue taskQueue;
 	private ToRouterConnection toRouter;
 
-	PrintStream printStream;
 
 	public TaskQueueHandler(OffloadingService context, final ToRouterConnection toRouter, TaskQueue taskQueue) {
 		lock = new Object();
 		this.context = context;
 		this.toRouter = toRouter;
 		this.taskQueue = taskQueue;
-		try {
-			printStream = new PrintStream(new File("/sdcard/res.csv"));
-		} catch (FileNotFoundException e1) {
-		}
 	}
 
 	@Override
@@ -116,8 +111,8 @@ public class TaskQueueHandler implements Observer {
 					result = m.invoke(offloadableMethod.methodPackage.receiver, offloadableMethod.methodPackage.paraValues);
 					offloadableMethod.result = result;
 					sentMessage.pureExecTime = System.currentTimeMillis() - sentMessage.pureExecTime;
-					synchronized (TaskQueue.lock) {
-						TaskQueue.lock.notifyAll();
+					synchronized (offloadableMethod) {
+						offloadableMethod.notifyAll();
 					}
 					System.out.println("Total Exec Time (including method invocation) = " + sentMessage.pureExecTime / 1000f);
 				} catch (Exception e) {
@@ -134,6 +129,7 @@ public class TaskQueueHandler implements Observer {
 		byte[] tempArray;
 		try {
 			File apkFile = new File(offloadableMethod.apkName);
+			System.out.println("APK file = " + offloadableMethod.apkName);
 			FileInputStream fin = new FileInputStream(apkFile);
 			BufferedInputStream bis = new BufferedInputStream(fin);
 			tempArray = new byte[(int) apkFile.length()];

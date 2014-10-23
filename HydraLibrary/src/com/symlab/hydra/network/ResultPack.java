@@ -1,4 +1,4 @@
-package com.symlab.hydra.network.cloud;
+package com.symlab.hydra.network;
 
 import java.io.Serializable;
 

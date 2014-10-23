@@ -5,7 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OptionalDataException;
 import java.io.Serializable;
 import java.net.InetAddress;
 
@@ -13,9 +12,9 @@ public class DataPackage implements Serializable {
 
 	private static final long serialVersionUID = -3825185830334989901L;
 	public Integer id = new Integer(0);
-	public Msg destination; 
+	public Msg destination;
 	public Msg what;
-	
+
 	public InetAddress source;
 	public InetAddress dest;
 	public Byte[] dataByte;
@@ -23,9 +22,11 @@ public class DataPackage implements Serializable {
 	public Long rttRouterToVM = new Long(0);
 	public Long rttDeviceToVM = new Long(0);
 	public Long pureExecTime = new Long(0);
-	
 
 	public Boolean finish = false;
+	
+	public DataPackage() {
+	}
 
 	private DataPackage(Msg what, Object data, InetAddress source) {
 		this.what = what;
@@ -55,7 +56,7 @@ public class DataPackage implements Serializable {
 			ByteArrayOutputStream b = new ByteArrayOutputStream();
 			ObjectOutputStream o = new ObjectOutputStream(b);
 			o.writeObject(data);
-			byte [] dataByte2 = b.toByteArray();
+			byte[] dataByte2 = b.toByteArray();
 			dataByte = new Byte[dataByte2.length];
 			for (int i = 0; i < dataByte2.length; i++) {
 				dataByte[i] = dataByte2[i];
@@ -70,7 +71,7 @@ public class DataPackage implements Serializable {
 	public Object deserialize() {
 		Object data = null;
 		try {
-			byte [] dataByte2 = new byte[dataByte.length];
+			byte[] dataByte2 = new byte[dataByte.length];
 			for (int i = 0; i < dataByte.length; i++) {
 				dataByte2[i] = dataByte[i];
 			}

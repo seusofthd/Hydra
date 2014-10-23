@@ -22,17 +22,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.DhcpInfo;
-import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.util.Log;
 
-import com.symlab.hydra.lib.ApkHash;
 import com.symlab.hydra.lib.ByteFile;
 import com.symlab.hydra.lib.Constants;
 import com.symlab.hydra.lib.DynamicObjectInputStream;
@@ -41,7 +37,7 @@ import com.symlab.hydra.lib.OffloadableMethod;
 import com.symlab.hydra.lib.RemoteNodeException;
 import com.symlab.hydra.lib.ResultContainer;
 import com.symlab.hydra.lib.TaskQueue;
-import com.symlab.hydra.network.cloud.Pack;
+import com.symlab.hydra.lib.Utils;
 import com.symlab.hydra.profilers.Profiler;
 
 public class ToRouterConnection implements Runnable {
@@ -55,8 +51,6 @@ public class ToRouterConnection implements Runnable {
 	private IntentFilter intentFilter;
 
 	public Socket socket;
-	private DynamicObjectInputStream ois = null;
-	private ObjectOutputStream oos = null;
 	public ServerStreams streams = null;
 	TaskQueue taskQueue;
 	public String macAddress;
@@ -93,12 +87,10 @@ public class ToRouterConnection implements Runnable {
 
 	@Override
 	public void run() {
+		DynamicObjectInputStream ois = null;
+		ObjectOutputStream oos = null;
 		if (connectedToRouter) {
-			if (oos == null || ois == null)
-				connectedToRouter = false;
-			else {
-				Log.e(TAG, "Already connected");
-			}
+			connectedToRouter = false;
 			return;
 		}
 		if (routerAddress == null) {
@@ -135,12 +127,6 @@ public class ToRouterConnection implements Runnable {
 	}
 
 	class Receiving implements Runnable {
-		String functionName = null;
-		Class[] paramTypes = null;
-		Object[] paramValues = null;
-		Object state = null;
-		Class stateDType = null;
-		Pack myPack = null;
 		ServerStreams sstreams = null;
 		private ExecutorService workerPool;
 		private ExecutorService pool;
@@ -157,7 +143,7 @@ public class ToRouterConnection implements Runnable {
 		@Override
 		public void run() {
 			DataPackage receive = DataPackage.obtain(Msg.NONE);
-			Long totalExecDuration = null;
+			File dexOutputDir = context.getDir("dex", Context.MODE_PRIVATE);
 			String apkFilePath = "";
 			File dexFile = null;
 			boolean connectionloss = false;
@@ -191,40 +177,39 @@ public class ToRouterConnection implements Runnable {
 				case INIT_OFFLOAD:
 					String hashName = (String) receive.deserialize();
 					Log.d("NodeServer", "HashName***" + hashName);
-					File dexOutputDir = context.getDir("dex", Context.MODE_PRIVATE);
 					apkFilePath = dexOutputDir.getAbsolutePath() + "/" + hashName + ".apk";
-					Log.d("NodeServer", "apkFilePath: " + apkFilePath);
-					if (new File(apkFilePath).exists()) {
+					System.out.println("apkFilePath " + apkFilePath);
+					dexFile = new File(apkFilePath);
+					if (dexFile.exists()) {
+						// sstreams.addDex(dexFile);
 						receive.what = Msg.READY;
-//						btProfiler.addStartTime(System.nanoTime());
+						// btProfiler.addStartTime(System.nanoTime());
 						try {
 							sstreams.send(receive);
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
-//						btProfiler.addEndTime(System.nanoTime());
-					}
-					else {
+						// btProfiler.addEndTime(System.nanoTime());
+					} else {
 						receive.what = Msg.APK_REQUEST;
-//						btProfiler.addStartTime(System.nanoTime());
+						// btProfiler.addStartTime(System.nanoTime());
 						try {
 							sstreams.send(receive);
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
-//						btProfiler.addEndTime(System.nanoTime());
+						// btProfiler.addEndTime(System.nanoTime());
 					}
 					break;
 				case APK_REQUEST:
 					try {
 						OffloadableMethod offloadableMethod = taskQueue.getOffloadableMethod(receive.id);
-						File apkFile = new File(offloadableMethod.apkName);
-						FileInputStream fin = new FileInputStream(apkFile);
+						dexFile = new File(offloadableMethod.apkName);
+						FileInputStream fin = new FileInputStream(dexFile);
 						BufferedInputStream bis = new BufferedInputStream(fin);
-						byte[] tempArray = new byte[(int) apkFile.length()];
+						byte[] tempArray = new byte[(int) dexFile.length()];
 						bis.read(tempArray, 0, tempArray.length);
 						bis.close();
-						String hashValue = ApkHash.hash(tempArray);
 						receive.what = Msg.APK_SEND;
 						receive.serialize(new ByteFile(tempArray));
 						streams.send(receive);
@@ -240,7 +225,8 @@ public class ToRouterConnection implements Runnable {
 						BufferedOutputStream bout = new BufferedOutputStream(fout, Constants.BUFFER);
 						bout.write(bf.toByteArray());
 						bout.close();
-						sstreams.addDex(dexFile);
+						// sstreams.addDex(dexFile);
+						receive.serialize(null);
 						receive.what = Msg.READY;
 						sstreams.send(receive);
 					} catch (IOException e) {
@@ -249,8 +235,9 @@ public class ToRouterConnection implements Runnable {
 					break;
 				case READY:
 					try {
-						System.out.println("ID = "  + receive.id);
+						System.out.println("ID = " + receive.id);
 						OffloadableMethod offloadableMethod = taskQueue.dequeue(receive.id);
+						dexFile = new File(offloadableMethod.apkName);
 						receive.what = Msg.EXECUTE;
 						receive.serialize(offloadableMethod.methodPackage);
 						offloadableMethod.dataPackage = receive;
@@ -270,9 +257,7 @@ public class ToRouterConnection implements Runnable {
 
 					break;
 				case EXECUTE:
-					MethodPackage methodPack = null;
-					methodPack = (MethodPackage) receive.deserialize();
-
+					MethodPackage methodPack = (MethodPackage) Utils.deserialize(receive.dataByte, dexFile, dexOutputDir);
 					// progProfiler = new
 					// ProgramProfiler(methodPack.receiver.getClass().getName()
 					// +
@@ -302,7 +287,7 @@ public class ToRouterConnection implements Runnable {
 
 				case RESULT:
 					receive.rttDeviceToVM = System.currentTimeMillis() - receive.rttDeviceToVM;
-					ResultContainer resultContainer = (ResultContainer) receive.deserialize();
+					ResultContainer resultContainer = (ResultContainer) Utils.deserialize(receive.dataByte, dexFile, dexOutputDir);
 					printStream.println(receive.dest + "," + (receive.pureExecTime) / 1000f + "," + (receive.rttRouterToVM) / 1000f);
 					System.out.println("Total RTT = " + (receive.rttDeviceToVM) / 1000f + " DST=" + receive.destination);
 					System.out.println("RTT (Router to VM/offloadee) = " + (receive.rttRouterToVM) / 1000f);
@@ -320,7 +305,7 @@ public class ToRouterConnection implements Runnable {
 					if (counter == 0) {
 						receive.finish = true;
 					}
-					taskQueue.setResult(receive);
+					taskQueue.setResult(resultContainer);
 
 					break;
 				case FREE:

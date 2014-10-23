@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
 
+import android.util.Log;
 import dalvik.system.DexClassLoader;
 
 /**
@@ -41,22 +42,22 @@ public class DynamicObjectInputStream extends ObjectInputStream {
 	protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
 		try {
 			try {
-				// Log.d(TAG, "Loading: " + desc.getName());
-				// Log.i(TAG, "Using default loader");
+//				 Log.d(TAG, "Loading: " + desc.getName());
+//				 Log.i(TAG, "Using default loader");
 				// return super.resolveClass(desc);
 				return mCurrent.loadClass(desc.getName());
 			} catch (ClassNotFoundException e) {
-				// Log.wtf(TAG, "Failed, Use dex");
-				// Log.d(TAG, "Use Dex Loading: " + desc.getName());
+//				 Log.wtf(TAG, "Failed, Use dex");
+//				 Log.d(TAG, "Use Dex Loading: " + desc.getName());
 				return mCurrentDexLoader.loadClass(desc.getName());
 			}
 		} catch (ClassNotFoundException e) {
-			// Log.wtf(TAG, "Use dex failed");
+//			 Log.wtf(TAG, "Use dex failed");
 			return super.resolveClass(desc);
 			// return mCurrent.loadClass(desc.getName());
 		} catch (NullPointerException e) { // Thrown when currentDexLoader is
 			// not yet set up
-			// Log.wtf(TAG, "Didn't load dex file, Use dex failed");
+//			 Log.wtf(TAG, "Didn't load dex file, Use dex failed");
 			return super.resolveClass(desc);
 		}
 
@@ -81,11 +82,11 @@ public class DynamicObjectInputStream extends ObjectInputStream {
 	 * @param apkFile
 	 *            the apk package
 	 */
-	public void addDex(final File apkFile) {
+	public void addDex(final File apkFile, File optimizedDir) {
 		if (mCurrentDexLoader == null)
-			mCurrentDexLoader = new DexClassLoader(apkFile.getAbsolutePath(), apkFile.getParentFile().getAbsolutePath(), null, mCurrent);
+			mCurrentDexLoader = new DexClassLoader(apkFile.getAbsolutePath(), optimizedDir.getAbsolutePath(), null, mCurrent);
 		else
-			mCurrentDexLoader = new DexClassLoader(apkFile.getAbsolutePath(), apkFile.getParentFile().getAbsolutePath(), null, mCurrentDexLoader);
+			mCurrentDexLoader = new DexClassLoader(apkFile.getAbsolutePath(), optimizedDir.getAbsolutePath(), null, mCurrentDexLoader);
 
 	}
 

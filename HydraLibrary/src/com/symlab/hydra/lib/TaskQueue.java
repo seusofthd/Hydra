@@ -67,21 +67,15 @@ public class TaskQueue extends Observable {
 		}
 	}
 
-	public synchronized void setResult(DataPackage dataPackage) {
-		ResultContainer resultContainer = (ResultContainer) dataPackage.deserialize();
+	public synchronized void setResult(ResultContainer resultContainer) {
 		for (OffloadableMethod offloadableMethod : resultQueue) {
 			if (offloadableMethod.methodPackage.id == resultContainer.id) {
 				offloadableMethod.result = resultContainer.result;
-				offloadableMethod.dataPackage = dataPackage;
-				if (offloadableMethod.dataPackage.finish) {
-
-					synchronized (lock) {
-						lock.notifyAll();
-					}
+				offloadableMethod.execDuration = resultContainer.pureExecutionDuration;
+				synchronized (offloadableMethod) {
+					offloadableMethod.notifyAll();
 				}
 			}
 		}
 	}
-
-	public static Object lock = new Object();
 }

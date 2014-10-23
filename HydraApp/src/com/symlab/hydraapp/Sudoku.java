@@ -1,6 +1,6 @@
-package com.symlab.testoffloading;
+package com.symlab.hydraapp;
 
-import com.symlab.hydra.lib.Offloadable;
+import java.io.Serializable;
 
 /**
  * The <code>Sudoku</code> class povides a static <code>main</code> method
@@ -111,7 +111,7 @@ import com.symlab.hydra.lib.Offloadable;
  * @version 1.0
  * @author <a href="http://www.colloquial.com/carp">Bob Carpenter</a>
  */
-public class Sudoku extends Offloadable {
+public class Sudoku implements Serializable {
 
 	private static final long serialVersionUID = -3962977915411306215L;
 
@@ -209,10 +209,5 @@ public class Sudoku extends Offloadable {
 		return problem;
 	}
 
-	@Override
-	public void copyState(Offloadable state) {
-		Sudoku localState = (Sudoku) state;
-		this.matrix = localState.matrix;
-	}
 
 }

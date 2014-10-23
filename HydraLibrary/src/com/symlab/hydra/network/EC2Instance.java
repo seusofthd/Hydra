@@ -1,12 +1,10 @@
-package com.symlab.hydra.network.cloud;
+package com.symlab.hydra.network;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.Socket;
-
-import com.symlab.hydra.network.ServerStreams;
 
 public class EC2Instance implements Serializable{
 	public String name;
@@ -19,7 +17,7 @@ public class EC2Instance implements Serializable{
 	public String region;
 	public int highConditionCount = 0;
 	public int lowConditionCount = 0;
-	public transient ServerStreamsJava sstreams = null;
+	public transient ServerStreams sstreams = null;
 	public transient Socket socket;
 
 	public EC2Instance() {

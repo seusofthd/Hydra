@@ -34,6 +34,7 @@ import com.symlab.hydra.lib.DynamicObjectInputStream;
 import com.symlab.hydra.lib.MethodPackage;
 import com.symlab.hydra.lib.RemoteNodeException;
 import com.symlab.hydra.lib.ResultContainer;
+import com.symlab.hydra.lib.Utils;
 import com.symlab.hydra.network.DataPackage;
 import com.symlab.hydra.network.Msg;
 import com.symlab.hydra.network.ServerStreams;
@@ -57,15 +58,16 @@ public class CloudService extends Service implements Runnable {
 	public IBinder onBind(Intent intent) {
 		return mBinder;
 	}
-	
+
 	Context context;
+
 	public CloudService(Context context) {
 		this.context = context;
 		System.out.println("constructor");
 		workerPool = Executors.newCachedThreadPool();
 		pool = Executors.newCachedThreadPool();
 	}
-	
+
 	@Override
 	public void onCreate() {
 		System.out.println("in service on create");
@@ -142,8 +144,7 @@ public class CloudService extends Service implements Runnable {
 	@Override
 	public void run() {
 		DataPackage receive = DataPackage.obtain(Msg.NONE);
-		DataPackage sentMessage = null;
-		Long totalExecDuration = null;
+		File dexOutputDir = context.getDir("dex", Context.MODE_PRIVATE);
 		String apkFilePath = "";
 		File dexFile = null;
 		boolean connectionloss = false;
@@ -160,43 +161,47 @@ public class CloudService extends Service implements Runnable {
 				System.out.println("receive REG_VM");
 				break;
 			case PING:
-				sentMessage = DataPackage.obtain(Msg.PONG);
+				receive.what = Msg.PONG;
 				try {
-					sstreams.send(sentMessage);
+					sstreams.send(receive);
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
 
 				break;
 			case SUPPORT_OFFLOAD:
-				sentMessage = DataPackage.obtain(Msg.SUPPORT_OFFLOAD);
+				receive.what = Msg.SUPPORT_OFFLOAD;
 				try {
-					sstreams.send(sentMessage);
+					sstreams.send(receive);
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
-
 				break;
 			case INIT_OFFLOAD:
 				String hashName = (String) receive.deserialize();
 				Log.d("NodeServer", "HashName***" + hashName);
-				File dexOutputDir = context.getDir("dex", Context.MODE_PRIVATE);
 				apkFilePath = dexOutputDir.getAbsolutePath() + "/" + hashName + ".apk";
-				Log.d("NodeServer", "apkFilePath: " + apkFilePath);
-				if (new File(apkFilePath).exists()) {
+				System.out.println("apkFilePath " + apkFilePath);
+				dexFile = new File(apkFilePath);
+				if (dexFile.exists()) {
+					// sstreams.addDex(dexFile);
 					receive.what = Msg.READY;
+					// btProfiler.addStartTime(System.nanoTime());
 					try {
 						sstreams.send(receive);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+					// btProfiler.addEndTime(System.nanoTime());
 				} else {
 					receive.what = Msg.APK_REQUEST;
+					// btProfiler.addStartTime(System.nanoTime());
 					try {
 						sstreams.send(receive);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+					// btProfiler.addEndTime(System.nanoTime());
 				}
 				break;
 			case APK_SEND:
@@ -207,7 +212,8 @@ public class CloudService extends Service implements Runnable {
 					BufferedOutputStream bout = new BufferedOutputStream(fout, Constants.BUFFER);
 					bout.write(bf.toByteArray());
 					bout.close();
-					sstreams.addDex(dexFile);
+					// sstreams.addDex(dexFile);
+					receive.serialize(null);
 					receive.what = Msg.READY;
 					sstreams.send(receive);
 				} catch (IOException e) {
@@ -215,17 +221,39 @@ public class CloudService extends Service implements Runnable {
 				}
 				break;
 			case EXECUTE:
-				MethodPackage methodPack = null;
-				methodPack = (MethodPackage) receive.deserialize();
+				MethodPackage methodPack = (MethodPackage) Utils.deserialize(receive.dataByte, dexFile, dexOutputDir);
+				// progProfiler = new
+				// ProgramProfiler(methodPack.receiver.getClass().getName()
+				// +
+				// "#" + methodPack.methodName);
+				// profiler = new Profiler(context, progProfiler,
+				// devProfiler,
+				// btProfiler);
+				// totalExecDuration = System.nanoTime();
+				// profiler.startExecutionInfoTracking();
 				Future<ResultContainer> future = workerPool.submit(new Worker(methodPack));
 				pool.execute(new SendResult(future, null, receive));
 				break;
-			}
+			case REQUEST_STATUS:
+				// try {
+				// sstreams.send(DataPackage.obtain(Msg.RESPONSE_STATUS,
+				// DeviceStatus.newInstance(context).readStatus()));
+				// } catch (IOException e) {
+				// connectionloss = true;
+				// }
+				break;
 
+			case REGISTERED:
+				break;
+
+			case UNREGISTERED:
+				break;
+
+			}
 		}
 		try {
+			System.out.println("outside of While");
 			sstreams.tearDownStream();
-			// socket.close();
 			Thread.sleep(1000);
 			makeconnection();
 		} catch (Exception e1) {
@@ -234,7 +262,7 @@ public class CloudService extends Service implements Runnable {
 		return;
 	};
 
-	private class Worker implements Callable<ResultContainer> {
+	public class Worker implements Callable<ResultContainer> {
 		private MethodPackage methodPack;
 
 		public Worker(MethodPackage mp) {
@@ -259,7 +287,6 @@ public class CloudService extends Service implements Runnable {
 				e.printStackTrace();
 				ret = new ResultContainer(true, methodPack.receiver, new RemoteNodeException(e.getMessage(), e), 0L, 0L, methodPack.id);
 			}
-			// Log.e("Worker", "Remote Result: " + ret.result);
 			return ret;
 
 		}
@@ -271,18 +298,19 @@ public class CloudService extends Service implements Runnable {
 		// private Profiler profiler;
 		// private Long totalExecDuration;
 		DataPackage sentMessage;
+		InetAddress source;
 
 		public SendResult(Future<ResultContainer> f, Profiler profiler, DataPackage dataPackage) {
 			future = f;
 			// this.profiler = profiler;
 			// this.totalExecDuration = time;
+			this.source = dataPackage.source;
 			this.sentMessage = dataPackage;
 		}
 
 		@Override
 		public void run() {
 			try {
-				System.out.println("in sender");
 				ResultContainer result = future.get();
 				// LogRecord log =
 				// profiler.stopAndLogExecutionInfoTracking(true);
@@ -290,14 +318,14 @@ public class CloudService extends Service implements Runnable {
 				// result.pureExecutionDuration = totalExecDuration;
 				// totalExecDuration = System.nanoTime() -
 				// totalExecDuration;
-				// sentMessage = DataPackage.obtain(Msg.RESULT, result,
-				// source);
+				// DataPackage sentMessage = DataPackage.obtain(Msg.RESULT,
+				// result);
+
 				sentMessage.serialize(result);
 				sentMessage.what = Msg.RESULT;
 				sentMessage.pureExecTime = result.pureExecutionDuration;
-				sentMessage.dest = socket.getLocalAddress();
 				sstreams.send(sentMessage);
-				// sentMessage = DataPackage.obtain(Msg.FREE,
+				// sentMessage = DsataPackage.obtain(Msg.FREE,
 				// toRouter.myId);
 				// toRouter.send(sentMessage);
 				// profiler.stopAndLogExecutionInfoTracking(totalExecDuration,
@@ -307,32 +335,11 @@ public class CloudService extends Service implements Runnable {
 			} catch (ExecutionException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 
-	}
-
-	private boolean apkPresent(String filename) {
-		// return false;
-		File apkFile = new File(filename);
-		if (apkFile.exists()) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	// }
-
-	void returnnull(ObjectOutputStream oos) {
-		if (oos != null)
-			try {
-				oos.writeObject(null);
-				oos.flush();
-			} catch (IOException ex1) {
-
-			}
 	}
 
 }

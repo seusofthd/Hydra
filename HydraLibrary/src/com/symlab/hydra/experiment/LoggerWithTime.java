@@ -11,7 +11,7 @@ import android.text.format.Time;
 public class LoggerWithTime {
 
 	File logFileDir = Environment.getExternalStorageDirectory();
-	File logFile = new File(logFileDir, "dandelion_log.csv");
+	File logFile = new File(logFileDir, "hydra_log.csv");
 	Time t = new Time();;
 	
 	public static void log(String who, String record) {

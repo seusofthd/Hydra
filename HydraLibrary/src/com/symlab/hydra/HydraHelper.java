@@ -17,7 +17,7 @@ import com.symlab.hydra.profilers.LogRecord;
 
 public class HydraHelper implements Serializable {
 
-	private static final String TAG = "DandelionHelper";
+	private static final String TAG = "HydraHelper";
 
 	private IOffloadingService mService;
 	private Context mContext;
@@ -54,7 +54,7 @@ public class HydraHelper implements Serializable {
 		startOffloadingService();
 		if (!serviceBound) {
 			Log.d(TAG, "Bind Service");
-			mContext.bindService(offloadingServiceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+			mContext.bindService(new Intent(IOffloadingService.class.getName()), serviceConnection, Context.BIND_AUTO_CREATE);
 			serviceBound = true;
 		}
 

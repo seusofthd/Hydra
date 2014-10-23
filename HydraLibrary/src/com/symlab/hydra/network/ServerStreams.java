@@ -1,26 +1,23 @@
 package com.symlab.hydra.network;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OptionalDataException;
-import java.net.InetAddress;
 import java.net.Socket;
-
-import com.symlab.hydra.lib.DynamicObjectInputStream;
 
 public class ServerStreams {
 
-	private DynamicObjectInputStream objIn;
+	private ObjectInputStream objIn;
 	private ObjectOutputStream objOut;
 	public Socket socket;
 
-	public ServerStreams(DynamicObjectInputStream ois, ObjectOutputStream oos) {
+	public ServerStreams(ObjectInputStream ois, ObjectOutputStream oos) {
 		this.objIn = ois;
 		this.objOut = oos;
 	}
 
-	public ServerStreams(DynamicObjectInputStream ois, ObjectOutputStream oos, Socket socket) {
+	public ServerStreams(ObjectInputStream ois, ObjectOutputStream oos, Socket socket) {
 		this.objIn = ois;
 		this.objOut = oos;
 		this.socket = socket;
@@ -45,14 +42,6 @@ public class ServerStreams {
 		return ret;
 	}
 
-	public void addDex(String dexFile, String optDir) {
-		objIn.addDex(dexFile, optDir);
-	}
-
-	public void addDex(File dexFile) {
-		objIn.addDex(dexFile);
-	}
-
 	public void tearDownStream() {
 		try {
 			objIn.close();
@@ -61,4 +50,5 @@ public class ServerStreams {
 			e.printStackTrace();
 		}
 	}
+
 }

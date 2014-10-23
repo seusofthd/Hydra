@@ -25,7 +25,8 @@ public class OffloadableMethod implements Parcelable {
 	public long recordQuantity;
 
 	public OffloadableMethod(Context context, String appName, MethodPackage methodPackage, Class<?> reutrnType, Msg offloadingMethod) {
-		this.appName = appName;
+//		this.appName = appName;
+		this.apkName = appName;
 		this.methodPackage = methodPackage;
 //		resultTicket = new ResultTicket(reutrnType);
 		this.reutrnType = reutrnType;

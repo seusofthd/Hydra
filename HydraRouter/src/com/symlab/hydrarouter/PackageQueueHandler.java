@@ -132,7 +132,7 @@ public class PackageQueueHandler implements Observer {
 	}
 
 	private void send(DataPackage dp, InetAddress ip) {
-		if (ip.equals(workerList.toCloud.socket.getInetAddress())) {
+		if (workerList.toCloud!=null && ip.equals(workerList.toCloud.socket.getInetAddress())) {
 			try {
 				workerList.toCloud.send(dp);
 			} catch (IOException e) {
