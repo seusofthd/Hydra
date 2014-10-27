@@ -4,11 +4,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
-import android.content.Intent;
-
 import com.symlab.hydra.lib.Constants;
-import com.symlab.hydra.network.cloud.EC2Instance;
-import com.symlab.hydracloud.CloudService;
+import com.symlab.hydra.network.EC2Instance;
 
 public class Main {
 

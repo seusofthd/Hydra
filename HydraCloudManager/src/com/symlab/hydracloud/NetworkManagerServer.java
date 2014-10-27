@@ -24,7 +24,6 @@ import com.symlab.hydra.network.DataPackage;
 import com.symlab.hydra.network.EC2Instance;
 import com.symlab.hydra.network.Msg;
 import com.symlab.hydra.network.ServerStreams;
-import com.symlab.hydra.network.cloud.Pack;
 import com.symlab.hydra.profilers.Profiler;
 
 public class NetworkManagerServer implements Runnable {
@@ -161,7 +160,6 @@ public class NetworkManagerServer implements Runnable {
 		Object[] paramValues = null;
 		Object state = null;
 		Class stateDType = null;
-		Pack myPack = null;
 		ServerStreams sstreams = null;
 		Socket socket = null;
 		EC2Instance instance = new EC2Instance();

@@ -36,10 +36,9 @@ import com.symlab.hydra.lib.RemoteNodeException;
 import com.symlab.hydra.lib.ResultContainer;
 import com.symlab.hydra.lib.Utils;
 import com.symlab.hydra.network.DataPackage;
+import com.symlab.hydra.network.EC2Instance;
 import com.symlab.hydra.network.Msg;
 import com.symlab.hydra.network.ServerStreams;
-import com.symlab.hydra.network.cloud.EC2Instance;
-import com.symlab.hydra.network.cloud.Pack;
 import com.symlab.hydra.profilers.Profiler;
 
 public class CloudService extends Service implements Runnable {
@@ -138,7 +137,6 @@ public class CloudService extends Service implements Runnable {
 	Object[] paramValues = null;
 	Object state = null;
 	Class stateDType = null;
-	Pack myPack = null;
 	ServerStreams sstreams = null;
 
 	@Override
