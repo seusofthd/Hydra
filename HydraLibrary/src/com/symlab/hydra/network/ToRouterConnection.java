@@ -29,6 +29,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.util.Log;
 
+import com.symlab.hydra.OffloadingService;
 import com.symlab.hydra.lib.ByteFile;
 import com.symlab.hydra.lib.Constants;
 import com.symlab.hydra.lib.DynamicObjectInputStream;
@@ -47,7 +48,7 @@ public class ToRouterConnection implements Runnable {
 	private boolean connectedToRouter = false;
 	private InetAddress routerAddress = null;
 
-	private Context context;
+	private OffloadingService context;
 	private IntentFilter intentFilter;
 
 	public Socket socket;
@@ -57,7 +58,7 @@ public class ToRouterConnection implements Runnable {
 
 	PrintStream printStream;
 
-	public ToRouterConnection(Context context, TaskQueue taskQueue) {
+	public ToRouterConnection(OffloadingService context, TaskQueue taskQueue) {
 		this.context = context;
 		this.taskQueue = taskQueue;
 		intentFilter = new IntentFilter();
@@ -143,7 +144,6 @@ public class ToRouterConnection implements Runnable {
 		@Override
 		public void run() {
 			DataPackage receive = DataPackage.obtain(Msg.NONE);
-			File dexOutputDir = context.getDir("dex", Context.MODE_PRIVATE);
 			String apkFilePath = "";
 			File dexFile = null;
 			boolean connectionloss = false;
@@ -175,9 +175,9 @@ public class ToRouterConnection implements Runnable {
 					}
 					break;
 				case INIT_OFFLOAD:
-					String hashName = (String) receive.deserialize();
+					String hashName = (String) Utils.deserialize(receive.dataByte);
 					Log.d("NodeServer", "HashName***" + hashName);
-					apkFilePath = dexOutputDir.getAbsolutePath() + "/" + hashName + ".apk";
+					apkFilePath = context.dexOutputDir.getAbsolutePath() + "/" + hashName + ".apk";
 					System.out.println("apkFilePath " + apkFilePath);
 					dexFile = new File(apkFilePath);
 					if (dexFile.exists()) {
@@ -204,21 +204,21 @@ public class ToRouterConnection implements Runnable {
 				case APK_REQUEST:
 					try {
 						OffloadableMethod offloadableMethod = taskQueue.getOffloadableMethod(receive.id);
-						dexFile = new File(offloadableMethod.apkName);
+						dexFile = new File(offloadableMethod.apkPath);
 						FileInputStream fin = new FileInputStream(dexFile);
 						BufferedInputStream bis = new BufferedInputStream(fin);
 						byte[] tempArray = new byte[(int) dexFile.length()];
 						bis.read(tempArray, 0, tempArray.length);
 						bis.close();
 						receive.what = Msg.APK_SEND;
-						receive.serialize(new ByteFile(tempArray));
+						Utils.serialize(new ByteFile(tempArray));
 						streams.send(receive);
 					} catch (IOException e2) {
 						e2.printStackTrace();
 					}
 					break;
 				case APK_SEND:
-					ByteFile bf = (ByteFile) receive.deserialize();
+					ByteFile bf = (ByteFile) Utils.deserialize(receive.dataByte);
 					dexFile = new File(apkFilePath);
 					try {
 						FileOutputStream fout = new FileOutputStream(dexFile);
@@ -226,7 +226,7 @@ public class ToRouterConnection implements Runnable {
 						bout.write(bf.toByteArray());
 						bout.close();
 						// sstreams.addDex(dexFile);
-						receive.serialize(null);
+						Utils.serialize(null);
 						receive.what = Msg.READY;
 						sstreams.send(receive);
 					} catch (IOException e) {
@@ -235,12 +235,11 @@ public class ToRouterConnection implements Runnable {
 					break;
 				case READY:
 					try {
-						System.out.println("ID = " + receive.id);
 						OffloadableMethod offloadableMethod = taskQueue.dequeue(receive.id);
-						dexFile = new File(offloadableMethod.apkName);
+						dexFile = new File(offloadableMethod.apkPath);
 						receive.what = Msg.EXECUTE;
-						receive.serialize(offloadableMethod.methodPackage);
-						offloadableMethod.dataPackage = receive;
+						Utils.serialize(offloadableMethod.methodPackage);
+//						offloadableMethod.dataPackage = receive;
 						receive.rttDeviceToVM = System.currentTimeMillis();
 
 						ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
@@ -257,7 +256,7 @@ public class ToRouterConnection implements Runnable {
 
 					break;
 				case EXECUTE:
-					MethodPackage methodPack = (MethodPackage) Utils.deserialize(receive.dataByte, dexFile, dexOutputDir);
+					MethodPackage methodPack = (MethodPackage) Utils.deserialize(receive.dataByte, dexFile, context.dexOutputDir);
 					// progProfiler = new
 					// ProgramProfiler(methodPack.receiver.getClass().getName()
 					// +
@@ -287,7 +286,7 @@ public class ToRouterConnection implements Runnable {
 
 				case RESULT:
 					receive.rttDeviceToVM = System.currentTimeMillis() - receive.rttDeviceToVM;
-					ResultContainer resultContainer = (ResultContainer) Utils.deserialize(receive.dataByte, dexFile, dexOutputDir);
+					ResultContainer resultContainer = (ResultContainer) Utils.deserialize(receive.dataByte, dexFile, context.dexOutputDir);
 					printStream.println(receive.dest + "," + (receive.pureExecTime) / 1000f + "," + (receive.rttRouterToVM) / 1000f);
 					System.out.println("Total RTT = " + (receive.rttDeviceToVM) / 1000f + " DST=" + receive.destination);
 					System.out.println("RTT (Router to VM/offloadee) = " + (receive.rttRouterToVM) / 1000f);
@@ -335,19 +334,19 @@ public class ToRouterConnection implements Runnable {
 			Object result = null;
 			Long execDuration = null;
 			try {
-				Method method = methodPack.receiver.getClass().getDeclaredMethod(methodPack.methodName, methodPack.paraTypes);
+				Method method = methodPack.object.getClass().getDeclaredMethod(methodPack.methodName, methodPack.paraTypes);
 				method.setAccessible(true);
 				Long startExecTime = System.currentTimeMillis();
-				result = method.invoke(methodPack.receiver, methodPack.paraValues);
+				result = method.invoke(methodPack.object, methodPack.paraValues);
 				execDuration = System.currentTimeMillis() - startExecTime;
 				System.out.println("Pure Execution time (including invokation) = " + execDuration / 1000f);
-				ret = new ResultContainer(false, methodPack.receiver, result, execDuration, 0L, methodPack.id);
+				ret = new ResultContainer(false, methodPack.object, result, execDuration, 0L, methodPack.id);
 			} catch (NoSuchMethodException e) {
-				ret = new ResultContainer(true, methodPack.receiver, new RemoteNodeException(e.getMessage(), e), 0L, 0L, methodPack.id);
+				ret = new ResultContainer(true, methodPack.object, new RemoteNodeException(e.getMessage(), e), 0L, 0L, methodPack.id);
 			} catch (InvocationTargetException e) {
-				ret = new ResultContainer(true, methodPack.receiver, new RemoteNodeException(e.getMessage(), e), 0L, 0L, methodPack.id);
+				ret = new ResultContainer(true, methodPack.object, new RemoteNodeException(e.getMessage(), e), 0L, 0L, methodPack.id);
 			} catch (IllegalAccessException e) {
-				ret = new ResultContainer(true, methodPack.receiver, new RemoteNodeException(e.getMessage(), e), 0L, 0L, methodPack.id);
+				ret = new ResultContainer(true, methodPack.object, new RemoteNodeException(e.getMessage(), e), 0L, 0L, methodPack.id);
 			}
 			Log.e("Worker", "Remote Result: " + ret.result);
 			return ret;
@@ -384,7 +383,7 @@ public class ToRouterConnection implements Runnable {
 				// DataPackage sentMessage = DataPackage.obtain(Msg.RESULT,
 				// result);
 
-				sentMessage.serialize(result);
+				Utils.serialize(result);
 				sentMessage.what = Msg.RESULT;
 				sentMessage.pureExecTime = result.pureExecutionDuration;
 				streams.send(sentMessage);

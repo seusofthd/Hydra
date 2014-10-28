@@ -22,6 +22,7 @@ import com.symlab.hydra.lib.ByteFile;
 import com.symlab.hydra.lib.Constants;
 import com.symlab.hydra.lib.DynamicObjectInputStream;
 import com.symlab.hydra.lib.OffloadableMethod;
+import com.symlab.hydra.lib.Utils;
 import com.symlab.hydra.network.DataPackage;
 import com.symlab.hydra.network.Msg;
 import com.symlab.hydra.network.ServerStreams;
@@ -339,12 +340,12 @@ public class RouterServer implements Runnable {
 					packetQueue.enqueue(receive);
 					break;
 				case FREE:
-					String name = (String) receive.deserialize();
+					String name = (String) Utils.deserialize(receive.dataByte);
 					// statusTable.setState(name, WorkerList.STATE_AVAILABLE);
 					Log.d(TAG, "Free device: " + name);
 					break;
 				case RESPONSE_STATUS:
-					Status s = (Status) receive.deserialize();
+					Status s = (Status) Utils.deserialize(receive.dataByte);
 					break;
 				case RESULT:
 					receive.rttRouterToVM = System.currentTimeMillis() - receive.rttRouterToVM;

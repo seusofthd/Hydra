@@ -1,5 +1,6 @@
 package com.symlab.hydra;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -7,14 +8,17 @@ import java.util.concurrent.Executors;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager.NameNotFoundException;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
 import android.os.PowerManager;
 import android.os.RemoteException;
 import android.widget.Toast;
 
 import com.symlab.hydra.lib.OffloadableMethod;
 import com.symlab.hydra.lib.TaskQueue;
+import com.symlab.hydra.lib.Utils;
 import com.symlab.hydra.network.DataPackage;
 import com.symlab.hydra.network.Msg;
 import com.symlab.hydra.network.ToRouterConnection;
@@ -39,17 +43,18 @@ public class OffloadingService extends Service {
 	private Profiler profiler;
 	private PowerManager.WakeLock wakeLock;
 	private PowerManager pm;
+	public Msg offloadingMethod;
+	public File dexOutputDir;
 	
-	
+	private IOffloadingCallback mServiceCallback;
+
 	private final IOffloadingService.Stub mBinder = new IOffloadingService.Stub() {
 
 		@Override
-		public void addTaskToQueue(OffloadableMethod offloadableMethod) throws RemoteException {
-//			try {
-//				offloadableMethod.apkName = getPackageManager().getApplicationInfo(offloadableMethod.appName, 0).sourceDir;
-//			} catch (NameNotFoundException e) {
-//				e.printStackTrace();
-//			}
+		public void addTaskToQueue(byte[] offloadableMethodBytes, String apkPath) throws RemoteException {
+			File dexFile = new File(apkPath);
+			System.out.println("start");
+			OffloadableMethod offloadableMethod = (OffloadableMethod) Utils.deserialize(offloadableMethodBytes, dexFile, dexOutputDir);
 			taskQueue.enqueue(offloadableMethod);
 		}
 
@@ -58,15 +63,17 @@ public class OffloadingService extends Service {
 			return toRouter.macAddress;
 		}
 
-		@Override
-		public void startProfiling(String methodName) throws RemoteException {
-			profiler.startExecutionInfoTracking(methodName);
-		}
-
-		@Override
-		public LogRecord stopProfiling(boolean receivedTask) throws RemoteException {
-			return profiler.stopAndLogExecutionInfoTracking(receivedTask);
-		}
+		// @Override
+		// public void startProfiling(String methodName) throws RemoteException
+		// {
+		// profiler.startExecutionInfoTracking(methodName);
+		// }
+		//
+		// @Override
+		// public LogRecord stopProfiling(boolean receivedTask) throws
+		// RemoteException {
+		// return profiler.stopAndLogExecutionInfoTracking(receivedTask);
+		// }
 
 		@Override
 		public void startHelping() throws RemoteException {
@@ -80,15 +87,27 @@ public class OffloadingService extends Service {
 
 		}
 
+		@Override
+		public void registerCallback(IOffloadingCallback arg0) throws RemoteException {
+			mServiceCallback = arg0;
+
+		}
+
+		@Override
+		public void unregisterCallback() throws RemoteException {
+			mServiceCallback = null;
+		}
+
 	};
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Toast.makeText(this, "Starting Service", Toast.LENGTH_SHORT).show();
+		dexOutputDir = getDir("dex", Context.MODE_PRIVATE);
 		pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ServiceWakelook");
 		wakeLock.acquire();
-		taskQueue = new TaskQueue();
+		taskQueue = new TaskQueue(this);
 		toRouter = new ToRouterConnection(this, taskQueue);
 		taskQueueHandler = new TaskQueueHandler(this, toRouter, taskQueue);
 		taskQueue.addObserver(taskQueueHandler);
@@ -96,9 +115,10 @@ public class OffloadingService extends Service {
 		progProfiler = new ProgramProfiler();
 		devProfiler = new DeviceProfiler(this);
 		btProfiler = new BluetoothProfiler();
-		profiler = new Profiler(this, progProfiler, devProfiler,btProfiler);
+		profiler = new Profiler(this, progProfiler, devProfiler, btProfiler);
 		return START_STICKY;
 	}
+
 
 	@Override
 	public IBinder onBind(Intent arg0) {
@@ -125,6 +145,14 @@ public class OffloadingService extends Service {
 
 	public static synchronized void setServiceOff() {
 		serviceStarted = false;
+	}
+	
+	public void setResults(OffloadableMethod arg0) {
+		try {
+			mServiceCallback.setResult(Utils.serialize2(arg0));
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override

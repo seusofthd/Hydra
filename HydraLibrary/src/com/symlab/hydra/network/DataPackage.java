@@ -8,6 +8,8 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.InetAddress;
 
+import com.symlab.hydra.lib.Utils;
+
 public class DataPackage implements Serializable {
 
 	private static final long serialVersionUID = -3825185830334989901L;
@@ -30,9 +32,9 @@ public class DataPackage implements Serializable {
 
 	private DataPackage(Msg what, Object data, InetAddress source) {
 		this.what = what;
-		this.dataByte = serialize(data);
+		this.dataByte = Utils.serialize(data);
 		this.source = source;
-		serialize(data);
+		Utils.serialize(data);
 	}
 
 	public static DataPackage obtain() {
@@ -49,38 +51,5 @@ public class DataPackage implements Serializable {
 
 	public static DataPackage obtain(Msg what, Object data, InetAddress source) {
 		return new DataPackage(what, data, source);
-	}
-
-	public Byte[] serialize(Object data) {
-		try {
-			ByteArrayOutputStream b = new ByteArrayOutputStream();
-			ObjectOutputStream o = new ObjectOutputStream(b);
-			o.writeObject(data);
-			byte[] dataByte2 = b.toByteArray();
-			dataByte = new Byte[dataByte2.length];
-			for (int i = 0; i < dataByte2.length; i++) {
-				dataByte[i] = dataByte2[i];
-			}
-		} catch (IOException e) {
-			dataByte = new Byte[1];
-			e.printStackTrace();
-		}
-		return dataByte;
-	}
-
-	public Object deserialize() {
-		Object data = null;
-		try {
-			byte[] dataByte2 = new byte[dataByte.length];
-			for (int i = 0; i < dataByte.length; i++) {
-				dataByte2[i] = dataByte[i];
-			}
-			ByteArrayInputStream b = new ByteArrayInputStream(dataByte2);
-			ObjectInputStream o = new ObjectInputStream(b);
-			data = o.readObject();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return data;
 	}
 }

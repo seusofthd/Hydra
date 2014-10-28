@@ -2,6 +2,7 @@ package com.symlab.hydraapp;
 
 import java.io.Serializable;
 
+
 /**
  * The <code>Sudoku</code> class povides a static <code>main</code> method
  * allowing it to be called from the command line to print the solution to a
@@ -208,6 +209,5 @@ public class Sudoku implements Serializable {
 		}
 		return problem;
 	}
-
 
 }

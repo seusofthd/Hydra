@@ -176,7 +176,7 @@ public class CloudService extends Service implements Runnable {
 				}
 				break;
 			case INIT_OFFLOAD:
-				String hashName = (String) receive.deserialize();
+				String hashName = (String) Utils.deserialize(receive.dataByte);
 				Log.d("NodeServer", "HashName***" + hashName);
 				apkFilePath = dexOutputDir.getAbsolutePath() + "/" + hashName + ".apk";
 				System.out.println("apkFilePath " + apkFilePath);
@@ -203,7 +203,7 @@ public class CloudService extends Service implements Runnable {
 				}
 				break;
 			case APK_SEND:
-				ByteFile bf = (ByteFile) receive.deserialize();
+				ByteFile bf = (ByteFile) Utils.deserialize(receive.dataByte);
 				dexFile = new File(apkFilePath);
 				try {
 					FileOutputStream fout = new FileOutputStream(dexFile);
@@ -211,7 +211,7 @@ public class CloudService extends Service implements Runnable {
 					bout.write(bf.toByteArray());
 					bout.close();
 					// sstreams.addDex(dexFile);
-					receive.serialize(null);
+					Utils.serialize(null);
 					receive.what = Msg.READY;
 					sstreams.send(receive);
 				} catch (IOException e) {
@@ -274,16 +274,16 @@ public class CloudService extends Service implements Runnable {
 			Object result = null;
 			Long execDuration = null;
 			try {
-				Method method = methodPack.receiver.getClass().getDeclaredMethod(methodPack.methodName, methodPack.paraTypes);
+				Method method = methodPack.object.getClass().getDeclaredMethod(methodPack.methodName, methodPack.paraTypes);
 				method.setAccessible(true);
 				Long startExecTime = System.currentTimeMillis();
-				result = method.invoke(methodPack.receiver, methodPack.paraValues);
+				result = method.invoke(methodPack.object, methodPack.paraValues);
 				execDuration = System.currentTimeMillis() - startExecTime;
 				System.out.println("Pure Execution time (including invokation) = " + execDuration / 1000f);
-				ret = new ResultContainer(false, methodPack.receiver, result, execDuration, 0L, methodPack.id);
+				ret = new ResultContainer(false, methodPack.object, result, execDuration, 0L, methodPack.id);
 			} catch (Exception e) {
 				e.printStackTrace();
-				ret = new ResultContainer(true, methodPack.receiver, new RemoteNodeException(e.getMessage(), e), 0L, 0L, methodPack.id);
+				ret = new ResultContainer(true, methodPack.object, new RemoteNodeException(e.getMessage(), e), 0L, 0L, methodPack.id);
 			}
 			return ret;
 
@@ -319,7 +319,7 @@ public class CloudService extends Service implements Runnable {
 				// DataPackage sentMessage = DataPackage.obtain(Msg.RESULT,
 				// result);
 
-				sentMessage.serialize(result);
+				Utils.serialize(result);
 				sentMessage.what = Msg.RESULT;
 				sentMessage.pureExecTime = result.pureExecutionDuration;
 				sstreams.send(sentMessage);

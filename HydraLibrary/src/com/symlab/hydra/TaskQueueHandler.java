@@ -19,6 +19,7 @@ import com.symlab.hydra.lib.ByteFile;
 import com.symlab.hydra.lib.OffloadableMethod;
 import com.symlab.hydra.lib.OffloadingNetworkException;
 import com.symlab.hydra.lib.RemoteNodeException;
+import com.symlab.hydra.lib.ResultContainer;
 import com.symlab.hydra.lib.TaskQueue;
 import com.symlab.hydra.network.DataPackage;
 import com.symlab.hydra.network.Msg;
@@ -66,7 +67,7 @@ public class TaskQueueHandler implements Observer {
 	public void execute(OffloadableMethod offloadableMethod) {
 		Object result = null;
 		try {
-			if (offloadableMethod.offloadingMethod!=Msg.LOCAL && toRouter.streams != null) {
+			if (context.offloadingMethod!=Msg.LOCAL && toRouter.streams != null) {
 				System.out.println("Executing Remotely ...");
 				try {
 					sendAndExecute(offloadableMethod);
@@ -93,28 +94,21 @@ public class TaskQueueHandler implements Observer {
 			public void run() {
 				Object result = null;
 				Method m;
-				DataPackage sentMessage = DataPackage.obtain(Msg.EXECUTE, offloadableMethod.methodPackage, toRouter.socket.getLocalAddress());
-				sentMessage.pureExecTime = System.currentTimeMillis();
-				offloadableMethod.dataPackage = sentMessage;
-
+				Long execDuration = System.currentTimeMillis();
 				try {
-					ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
-					ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteOutputStream);
-					objectOutputStream.writeObject(sentMessage);
-					objectOutputStream.flush();
-					objectOutputStream.close();
-					System.out.println("### SIZE ###   " + byteOutputStream.toByteArray().length);
-
-					Class<?> temp = offloadableMethod.methodPackage.receiver.getClass();
+					System.out.println(taskQueue.dequeue(offloadableMethod.methodPackage.id).methodPackage.id);
+					Class<?> temp = offloadableMethod.methodPackage.object.getClass();
 					m = temp.getDeclaredMethod(offloadableMethod.methodPackage.methodName, offloadableMethod.methodPackage.paraTypes);
 					m.setAccessible(true);
-					result = m.invoke(offloadableMethod.methodPackage.receiver, offloadableMethod.methodPackage.paraValues);
+					result = m.invoke(offloadableMethod.methodPackage.object, offloadableMethod.methodPackage.paraValues);
 					offloadableMethod.result = result;
-					sentMessage.pureExecTime = System.currentTimeMillis() - sentMessage.pureExecTime;
-					synchronized (offloadableMethod) {
-						offloadableMethod.notifyAll();
-					}
-					System.out.println("Total Exec Time (including method invocation) = " + sentMessage.pureExecTime / 1000f);
+					execDuration = System.currentTimeMillis() - execDuration;
+					ResultContainer resultContainer = new ResultContainer(false, offloadableMethod.methodPackage.object, result, execDuration, 0L, offloadableMethod.methodPackage.id);
+//					synchronized (offloadableMethod) {
+//						offloadableMethod.notifyAll();
+//					}
+					taskQueue.setResult(resultContainer);
+					System.out.println("Total Exec Time (including method invocation) = " + execDuration / 1000f);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -128,8 +122,8 @@ public class TaskQueueHandler implements Observer {
 		Object result = null;
 		byte[] tempArray;
 		try {
-			File apkFile = new File(offloadableMethod.apkName);
-			System.out.println("APK file = " + offloadableMethod.apkName);
+			File apkFile = new File(offloadableMethod.apkPath);
+			System.out.println("APK file = " + offloadableMethod.apkPath);
 			FileInputStream fin = new FileInputStream(apkFile);
 			BufferedInputStream bis = new BufferedInputStream(fin);
 			tempArray = new byte[(int) apkFile.length()];
@@ -138,7 +132,7 @@ public class TaskQueueHandler implements Observer {
 			String hashValue = ApkHash.hash(tempArray);
 			sentMessage = DataPackage.obtain(Msg.INIT_OFFLOAD, hashValue);
 			sentMessage.id = offloadableMethod.methodPackage.id;
-			sentMessage.destination = offloadableMethod.offloadingMethod;
+//			sentMessage.destination = offloadableMethod.offloadingMethod;
 			sentMessage.source = toRouter.socket.getLocalAddress();
 			toRouter.streams.send(sentMessage);
 		} catch (Exception e) {

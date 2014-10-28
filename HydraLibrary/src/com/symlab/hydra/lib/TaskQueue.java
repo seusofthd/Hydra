@@ -3,15 +3,19 @@ package com.symlab.hydra.lib;
 import java.util.LinkedList;
 import java.util.Observable;
 
+import com.symlab.hydra.OffloadingService;
 import com.symlab.hydra.network.DataPackage;
 
 public class TaskQueue extends Observable {
+	
+	OffloadingService context;
 
 	private LinkedList<OffloadableMethod> queue;
 	private LinkedList<OffloadableMethod> waitingQueue;
 	private LinkedList<OffloadableMethod> resultQueue;
 
-	public TaskQueue() {
+	public TaskQueue(OffloadingService context) {
+		this.context = context;
 		queue = new LinkedList<OffloadableMethod>();
 		waitingQueue = new LinkedList<OffloadableMethod>();
 		resultQueue = new LinkedList<OffloadableMethod>();
@@ -68,13 +72,11 @@ public class TaskQueue extends Observable {
 	}
 
 	public synchronized void setResult(ResultContainer resultContainer) {
-		for (OffloadableMethod offloadableMethod : resultQueue) {
-			if (offloadableMethod.methodPackage.id == resultContainer.id) {
-				offloadableMethod.result = resultContainer.result;
-				offloadableMethod.execDuration = resultContainer.pureExecutionDuration;
-				synchronized (offloadableMethod) {
-					offloadableMethod.notifyAll();
-				}
+		for (OffloadableMethod om : resultQueue) {
+			if (om.methodPackage.id == resultContainer.id) {
+				om.result = resultContainer.result;
+				om.execDuration = resultContainer.pureExecutionDuration;
+				context.setResults(om);
 			}
 		}
 	}

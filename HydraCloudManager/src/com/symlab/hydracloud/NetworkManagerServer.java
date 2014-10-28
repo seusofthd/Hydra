@@ -20,11 +20,13 @@ import java.util.concurrent.Future;
 import com.symlab.hydra.lib.Constants;
 import com.symlab.hydra.lib.MethodPackage;
 import com.symlab.hydra.lib.ResultContainer;
+import com.symlab.hydra.lib.Utils;
 import com.symlab.hydra.network.DataPackage;
 import com.symlab.hydra.network.EC2Instance;
 import com.symlab.hydra.network.Msg;
 import com.symlab.hydra.network.ServerStreams;
 import com.symlab.hydra.profilers.Profiler;
+import com.symlab.hydracloud.NetworkManagerServer.Receiving;
 
 public class NetworkManagerServer implements Runnable {
 
@@ -292,7 +294,7 @@ public class NetworkManagerServer implements Runnable {
 					// }
 					instance.socket = socket;
 					instance.sstreams = sstreams;
-					EC2Instance ec2Instance = (EC2Instance) receive.deserialize();
+					EC2Instance ec2Instance = (EC2Instance) Utils.deserialize(receive.dataByte);
 					instance.publicIP = ec2Instance.publicIP;
 					instance.privateIP = ec2Instance.privateIP;
 					instance.ID = ec2Instance.ID;

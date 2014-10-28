@@ -1,5 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">HydraAppsLib</string>
+    <string name="app_name">hydra App</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Hello world!</string>
+    
+    <string-array name="app_list">
+        <item>8-Queen</item>
+        <item>7-Queen</item>
+        <item>Quick Sort</item>
+        <item>Sudoku</item>
+        <item>FaceDetection 1MB</item>
+        <item>FaceDetection 0.5MB</item>
+    </string-array>
+    <string-array name="sch_list">
+        <item>locally</item>
+        <item>Offload-Cloud</item>
+        <item>Offload-Phone</item>
+        <item>Greedy</item>
+    </string-array>
 
 </resources>

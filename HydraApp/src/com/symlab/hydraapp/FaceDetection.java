@@ -10,17 +10,17 @@ import android.media.FaceDetector;
 import android.media.FaceDetector.Face;
 import android.util.Log;
 
-public class FaceDetection implements Serializable {
-
+public class FaceDetection implements Serializable{
+	
 	private static final String TAG = "TestFaceDetection";
-
+	
 	private byte[] bytesar;
-
+	
 	int rowBytes;
 	int heightImage;
 	int widthImage;
 	int dstCapacity;
-
+	
 	private static final long serialVersionUID = 1470242663091042025L;
 
 	public int detect_faces(int num, int n) {
@@ -48,7 +48,7 @@ public class FaceDetection implements Serializable {
 		bytesar = null;
 		return foundNum;
 	}
-
+	
 	public void getImage(String imageToCheck) {
 		Bitmap sourceImage;
 		BitmapFactory.Options opts = new BitmapFactory.Options();
