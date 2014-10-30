@@ -1,6 +1,7 @@
 package com.symlab.hydrasvmservice;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
@@ -17,9 +18,8 @@ import com.symlab.hydra.OffloadingService;
 import com.symlab.hydra.lib.MethodPackage;
 import com.symlab.hydra.lib.OffloadableMethod;
 import com.symlab.hydra.network.Msg;
-import com.symlab.hydraapp.NQueens;
-import com.symlab.hydraapp.Sorting;
-import com.symlab.hydraapp.Sudoku;
+
+import dalvik.system.DexClassLoader;
 
 
 public class MainActivity extends Activity {
@@ -125,22 +125,30 @@ public class MainActivity extends Activity {
     }
     
 	public void execute_nqueen(View v, final int n) throws Exception {
-		NQueens subtasks;
-		final String classMethodName = Sorting.class.getName() + "#" + "solveNQueens" + "#" + 0 + "#" + 1;
-		hydraHelper.startProfiling(classMethodName);
-		subtasks = new NQueens();
-		final Class<?>[] paramTypes = { int.class, int.class, int.class };
-		Object[] paramValues = { n, 0, n };
 		
 		String apkPath = "/sdcard/Hydra/HydraApp.apk";
+		Object obj = null;
+		String classMethodName = null;
+		try {
+			DexClassLoader dexClassLoader = new DexClassLoader(apkPath, getDir("dex", Context.MODE_PRIVATE).getAbsolutePath(), null, getClassLoader());
+			Class<?> classToLoad = dexClassLoader.loadClass("com.symlab.hydraapp.NQueens");
+			obj = classToLoad.newInstance();
+			classMethodName = classToLoad.getName() + "#" + "solveNQueens" + "#" + 0 + "#" + 1;
+			// dh.startProfiling(classMethodName);
+		} catch (Exception e1) {
+			e1.printStackTrace();
+		}
 		
-		final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 10000000), subtasks, "solveNQueens", paramTypes, paramValues);
+		hydraHelper.startProfiling(classMethodName);
+		final Class<?>[] paramTypes = { int.class, int.class, int.class };
+		Object[] paramValues = { n, 0, n };
+		final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 10000000), obj, "solveNQueens", paramTypes, paramValues);
 		final OffloadableMethod offloadableMethod = new OffloadableMethod(hydraHelper.getPackageName(), apkPath, methodPackage, Boolean.class);
 		offloadableMethod.offloadingMethod = Msg.LOCAL;
 		hydraHelper.postTask(offloadableMethod, offloadableMethod.apkPath);
 		
 		
-		final MethodPackage methodPackage_remote = new MethodPackage((int) (Math.random() * 10000000), subtasks, "solveNQueens", paramTypes, paramValues);
+		final MethodPackage methodPackage_remote = new MethodPackage((int) (Math.random() * 10000000), obj, "solveNQueens", paramTypes, paramValues);
 		final OffloadableMethod offloadableMethod_remote = new OffloadableMethod(hydraHelper.getPackageName(), apkPath, methodPackage_remote, Boolean.class);
 		offloadableMethod_remote.offloadingMethod = Msg.CLOUD;
 		hydraHelper.postTask(offloadableMethod_remote, offloadableMethod_remote.apkPath);
