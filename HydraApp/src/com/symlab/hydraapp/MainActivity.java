@@ -2,6 +2,7 @@ package com.symlab.hydraapp;
 
 import java.io.File;
 import java.io.PrintStream;
+import java.lang.reflect.Method;
 
 import android.app.Activity;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -34,15 +35,21 @@ public class MainActivity extends Activity {
 	}
 
 	public void bindService(View v) {
-		hydraHelper.bindService();
-		clear_screen();
-		println("service is binded");
+		if (!hydraHelper.mIsBound) {
+			hydraHelper.bindService();
+			println("service is binded");
+		}else{
+			println("service is already binded");
+		}
 	}
 
 	public void unbindService(View v) {
-		hydraHelper.unbindService();
-		clear_screen();
-		println("service is UNbinded");
+		if (hydraHelper.mIsBound) {
+			hydraHelper.unbindService();
+			println("service is binded");
+		}else{
+			println("service is already binded");
+		}
 	}
 
 	PrintStream printStream;
@@ -82,26 +89,24 @@ public class MainActivity extends Activity {
 		}.start();
 	}
 
-	public void execute_nqueen(View v, final Integer n) {
+	public void execute_nqueen(View v, Integer n) {
 		println(n + "-Queens");
 		for (int i = 0; i < 1; i++) {
 			long time = System.currentTimeMillis();
-			String classMethodName = Sorting.class.getName() + "#" + "solveNQueens" + "#" + 0 + "#" + 1;
+			String classMethodName = NQueens.class.getName() + "#" + "solveNQueens" + "#" + 0 + "#" + 1;
 			// dh.startProfiling(classMethodName);
+			try {
+				Method method = NQueens.class.getDeclaredMethod("solveNqueens", int.class, int.class, int.class);
+			} catch (NoSuchMethodException e1) {
+				e1.printStackTrace();
+			}
 			NQueens obj = new NQueens();
 			Class<?>[] paramTypes = { int.class, int.class, int.class };
 			Object[] paramValues = { n, 0, n };
 
 			MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 1000000000), obj, "solveNQueens", paramTypes, paramValues);
-			String appName = getPackageName();
-			String apkPath = null;
-			try {
-				apkPath = getPackageManager().getApplicationInfo(appName, 0).sourceDir;
-			} catch (NameNotFoundException e1) {
-				e1.printStackTrace();
-			}
-			OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, appName, apkPath, methodPackage, Boolean.class);
-			hydraHelper.postTask(offloadableMethod, apkPath);
+			OffloadableMethod offloadableMethod = new OffloadableMethod(hydraHelper.getPackageName(), hydraHelper.getApkPath(), methodPackage, Boolean.class);
+			hydraHelper.postTask(offloadableMethod, offloadableMethod.apkPath);
 
 			try {
 				synchronized (offloadableMethod) {
@@ -119,7 +124,7 @@ public class MainActivity extends Activity {
 		println("qSort");
 		for (int k = 0; k < 20; k++) {
 			long time = System.currentTimeMillis();
-			String classMethodName = Sorting.class.getName() + "#" + "qSort" + "#" + 0 + "#" + 1;
+			String classMethodName = NQueens.class.getName() + "#" + "qSort" + "#" + 0 + "#" + 1;
 			// dh.startProfiling(classMethodName);
 			Sorting obj = new Sorting();
 			Class<?>[] paramTypes = {};
@@ -127,14 +132,8 @@ public class MainActivity extends Activity {
 
 			MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 1000000000), obj, "qSort", paramTypes, paramValues);
 			String appName = getPackageName();
-			String apkPath = null;
-			try {
-				apkPath = getPackageManager().getApplicationInfo(appName, 0).sourceDir;
-			} catch (NameNotFoundException e1) {
-				e1.printStackTrace();
-			}
-			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, appName, apkPath, methodPackage, void.class);
-			hydraHelper.postTask(offloadableMethod, apkPath);
+			OffloadableMethod offloadableMethod = new OffloadableMethod(hydraHelper.getPackageName(), hydraHelper.getApkPath(), methodPackage, void.class);
+			hydraHelper.postTask(offloadableMethod, offloadableMethod.apkPath);
 
 			try {
 				synchronized (offloadableMethod) {
@@ -152,7 +151,7 @@ public class MainActivity extends Activity {
 		println("Sudoku");
 		for (int k = 0; k < 20; k++) {
 			long time = System.currentTimeMillis();
-			String classMethodName = Sorting.class.getName() + "#" + "hasSolution" + "#" + 0 + "#" + 1;
+			String classMethodName = Sudoku.class.getName() + "#" + "hasSolution" + "#" + 0 + "#" + 1;
 			// dh.startProfiling(classMethodName);
 			Sudoku obj = new Sudoku();
 			Class<?>[] paramTypes = {};
@@ -160,14 +159,7 @@ public class MainActivity extends Activity {
 
 			MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 1000000000), obj, "hasSolution", paramTypes, paramValues);
 			String appName = getPackageName();
-			String apkPath = null;
-			try {
-				apkPath = getPackageManager().getApplicationInfo(appName, 0).sourceDir;
-			} catch (NameNotFoundException e1) {
-				e1.printStackTrace();
-			}
-			OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, appName, apkPath, methodPackage, Boolean.class);
-			hydraHelper.postTask(offloadableMethod, apkPath);
+			OffloadableMethod offloadableMethod = new OffloadableMethod(hydraHelper.getPackageName(), hydraHelper.getApkPath(), methodPackage, Boolean.class);
 
 			try {
 				synchronized (offloadableMethod) {
@@ -182,11 +174,11 @@ public class MainActivity extends Activity {
 
 	}
 
-	public void execute_face(View v, final int n) {
+	public void execute_face(View v, int n) {
 		println("FaceDetection " + n);
 		for (int k = 0; k < 20; k++) {
 			long time = System.currentTimeMillis();
-			String classMethodName = Sorting.class.getName() + "#" + "detect_faces" + "#" + 0 + "#" + 1;
+			String classMethodName = FaceDetection.class.getName() + "#" + "detect_faces" + "#" + 0 + "#" + 1;
 			// dh.startProfiling(classMethodName);
 			FaceDetection obj = new FaceDetection();
 			Class<?>[] paramTypes = { int.class, int.class };
@@ -199,8 +191,8 @@ public class MainActivity extends Activity {
 			} catch (NameNotFoundException e1) {
 				e1.printStackTrace();
 			}
-			OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, appName, apkPath, methodPackage, Integer.class);
-			hydraHelper.postTask(offloadableMethod, apkPath);
+			OffloadableMethod offloadableMethod = new OffloadableMethod(hydraHelper.getPackageName(), hydraHelper.getApkPath(), methodPackage, Integer.class);
+			hydraHelper.postTask(offloadableMethod, offloadableMethod.apkPath);
 
 			try {
 				synchronized (offloadableMethod) {
@@ -212,8 +204,9 @@ public class MainActivity extends Activity {
 			time = System.currentTimeMillis() - time;
 			System.out.println("total time = " + time / 1000f);
 		}
-		
+
 	}
+
 	public void println(final String s) {
 		new Thread() {
 			public void run() {

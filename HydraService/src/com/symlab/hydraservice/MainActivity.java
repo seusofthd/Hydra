@@ -63,28 +63,30 @@ public class MainActivity extends Activity {
 
 			@Override
 			public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-				if (offloadingService != null) {
-
-					Msg selected = Msg.LOCAL;
-					switch (position) {
-					case 0:
-						selected = Msg.LOCAL;
-					case 1:
-						selected = Msg.CLOUD;
-					case 2:
-						selected = Msg.SMARTPHONE;
-					case 3:
-						selected = Msg.GREEDY;
-					}
-					offloadingService.offloadingMethod = selected;
-				}
+				// OffloadingService offloadingService =
+				// (OffloadingService)hydraHelper.service;
+				// System.out.println("changed " + offloadingService);
+				// if (offloadingService != null) {
+				//
+				// Msg selected = Msg.LOCAL;
+				// switch (position) {
+				// case 0:
+				// selected = Msg.LOCAL;
+				// case 1:
+				// selected = Msg.CLOUD;
+				// case 2:
+				// selected = Msg.SMARTPHONE;
+				// case 3:
+				// selected = Msg.GREEDY;
+				// }
+				// offloadingService.offloadingMethod = selected;
+				// }
 			}
 
 			@Override
 			public void onNothingSelected(AdapterView<?> parent) {
-				if (offloadingService != null) {
-					offloadingService.offloadingMethod = Msg.LOCAL;
-				}
+				// TODO Auto-generated method stub
+
 			}
 
 		});
@@ -99,21 +101,38 @@ public class MainActivity extends Activity {
 	}
 
 	Intent intent;
-	OffloadingService offloadingService;
 
 	public void startService(View v) {
-		hydraHelper.startService(intent);
-		hydraHelper.bindService();
-		offloadingService = (OffloadingService) hydraHelper.service;
-		println("service is started");
+		if (!hydraHelper.serviceIsStart) {
+			hydraHelper.startService(intent);
+			println("service is started");
+			if (!hydraHelper.mIsBound) {
+				hydraHelper.bindService();
+				println("service is binded");
+			} else {
+				println("service is already binded");
+			}
+		} else {
+			println("service is already started");
+
+		}
 	}
 
 	public void stopService(View v) {
-		hydraHelper.stopHelping();
-		cb.setSelected(false);
-		hydraHelper.unbindService();
-		hydraHelper.stopService(intent);
-		println("service is stopped");
+		if (hydraHelper.serviceIsStart) {
+			hydraHelper.stopHelping();
+			cb.setSelected(false);
+			hydraHelper.stopService(intent);
+			println("service is stopped");
+			if (hydraHelper.mIsBound) {
+				hydraHelper.unbindService();
+				println("service is unbinded");
+			} else {
+				println("service is already unbinded");
+			}
+		} else {
+			println("service is already stopped");
+		}
 	}
 
 	class OCRthread extends Thread implements Serializable {
@@ -175,7 +194,7 @@ public class MainActivity extends Activity {
 			final Class<?>[] paramTypes = { int.class, int.class, int.class };
 			Object[] paramValues = { n, 0, n };
 			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), obj, "solveNQueens", paramTypes, paramValues);
-			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), apkPath, methodPackage, Boolean.class);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(hydraHelper.getPackageName(), apkPath, methodPackage, Boolean.class);
 			hydraHelper.postTask(offloadableMethod, apkPath);
 			try {
 				synchronized (offloadableMethod) {
@@ -207,7 +226,7 @@ public class MainActivity extends Activity {
 			final Class<?>[] paramTypes = {};
 			Object[] paramValues = {};
 			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), obj, "qSort", paramTypes, paramValues);
-			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), apkPath, methodPackage, void.class);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(hydraHelper.getPackageName(), apkPath, methodPackage, void.class);
 			hydraHelper.postTask(offloadableMethod, apkPath);
 			try {
 				synchronized (offloadableMethod) {
@@ -239,7 +258,7 @@ public class MainActivity extends Activity {
 			final Class<?>[] paramTypes = {};
 			Object[] paramValues = {};
 			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), obj, "hasSolution", paramTypes, paramValues);
-			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), apkPath, methodPackage, Boolean.class);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(hydraHelper.getPackageName(), apkPath, methodPackage, Boolean.class);
 			hydraHelper.postTask(offloadableMethod, apkPath);
 			try {
 				synchronized (offloadableMethod) {
@@ -271,7 +290,7 @@ public class MainActivity extends Activity {
 			final Class<?>[] paramTypes = { int.class, int.class };
 			Object[] paramValues = { 20, n };
 			final MethodPackage methodPackage = new MethodPackage((int) (Math.random() * 100000), obj, "detect_faces", paramTypes, paramValues);
-			final OffloadableMethod offloadableMethod = new OffloadableMethod(MainActivity.this, getPackageName(), apkPath, methodPackage, Integer.class);
+			final OffloadableMethod offloadableMethod = new OffloadableMethod(hydraHelper.getPackageName(), apkPath, methodPackage, Integer.class);
 			hydraHelper.postTask(offloadableMethod, apkPath);
 			try {
 				synchronized (offloadableMethod) {

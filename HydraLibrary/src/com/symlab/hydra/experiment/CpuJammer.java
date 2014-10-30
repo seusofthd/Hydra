@@ -38,14 +38,7 @@ public class CpuJammer {
 					pi *= Math.PI;
 			}
 		}
-	/*	
-		public void jamming() {
-			synchronized (lock) {
-				paused = false;
-				lock.notifyAll();
-			}
-		}
-*/
+
 		public void stopJam() {
 			synchronized (lock) {
 				paused = true;

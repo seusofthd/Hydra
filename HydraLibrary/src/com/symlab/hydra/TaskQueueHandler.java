@@ -67,7 +67,7 @@ public class TaskQueueHandler implements Observer {
 	public void execute(OffloadableMethod offloadableMethod) {
 		Object result = null;
 		try {
-			if (context.offloadingMethod!=Msg.LOCAL && toRouter.streams != null) {
+			if (offloadableMethod.offloadingMethod!=Msg.LOCAL && toRouter.streams != null) {
 				System.out.println("Executing Remotely ...");
 				try {
 					sendAndExecute(offloadableMethod);
@@ -104,9 +104,6 @@ public class TaskQueueHandler implements Observer {
 					offloadableMethod.result = result;
 					execDuration = System.currentTimeMillis() - execDuration;
 					ResultContainer resultContainer = new ResultContainer(false, offloadableMethod.methodPackage.object, result, execDuration, 0L, offloadableMethod.methodPackage.id);
-//					synchronized (offloadableMethod) {
-//						offloadableMethod.notifyAll();
-//					}
 					taskQueue.setResult(resultContainer);
 					System.out.println("Total Exec Time (including method invocation) = " + execDuration / 1000f);
 				} catch (Exception e) {
@@ -132,7 +129,7 @@ public class TaskQueueHandler implements Observer {
 			String hashValue = ApkHash.hash(tempArray);
 			sentMessage = DataPackage.obtain(Msg.INIT_OFFLOAD, hashValue);
 			sentMessage.id = offloadableMethod.methodPackage.id;
-//			sentMessage.destination = offloadableMethod.offloadingMethod;
+			sentMessage.destination = offloadableMethod.offloadingMethod;
 			sentMessage.source = toRouter.socket.getLocalAddress();
 			toRouter.streams.send(sentMessage);
 		} catch (Exception e) {

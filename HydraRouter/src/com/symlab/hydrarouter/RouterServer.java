@@ -56,7 +56,7 @@ public class RouterServer implements Runnable {
 				System.out.println("Listening to " + Constants.DEVICE_PORT + " for smartphones");
 				MainActivity.append("Listening to " + Constants.DEVICE_PORT + " for smartphones");
 				toDeviceSocket = serverSocket.accept();
-				
+
 				System.out.println("Device " + toDeviceSocket.getInetAddress().getHostAddress() + " connected.");
 				InputStream in = toDeviceSocket.getInputStream();
 				OutputStream out = toDeviceSocket.getOutputStream();
@@ -97,6 +97,7 @@ public class RouterServer implements Runnable {
 	ServerStreams toCloud = null;
 	boolean connectedToCloud = false;
 	Socket socketCloud = new Socket();
+
 	private boolean connectToCloud() {
 		try {
 			System.out.println("trying to connect to the VM Manager...");
@@ -125,7 +126,7 @@ public class RouterServer implements Runnable {
 				isServerShutdown = true;
 				try {
 					serverSocket.close();
-//					socketCloud.close();
+					// socketCloud.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -205,7 +206,7 @@ public class RouterServer implements Runnable {
 					InetAddress deviceID = (InetAddress) receive.source;
 					Device device = workerList.getDevices(deviceID);
 					receive.finish = false;
-					packetQueue.isCloudBusy=false;
+					packetQueue.isCloudBusy = false;
 					try {
 						device.streams.send(receive);
 					} catch (IOException e) {
@@ -238,20 +239,6 @@ public class RouterServer implements Runnable {
 	}
 
 	long rttStart = 0;
-	Runnable sendingThread = new Runnable() {
-		public void run() {
-			while (true) {
-				try {
-					System.out.println("sending PING");
-					rttStart = System.currentTimeMillis();
-					toCloud.send(DataPackage.obtain(Msg.PING));
-					Thread.sleep(10000);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	};
 
 	class DeviceReceiving implements Runnable {
 		private Device device;
@@ -264,7 +251,6 @@ public class RouterServer implements Runnable {
 		@Override
 		public void run() {
 			DataPackage receive = DataPackage.obtain(Msg.NONE);
-			DataPackage sentMessage = null;
 			boolean connectionBroken = false;
 			while (!connectionBroken && receive != null) {
 				try {
@@ -282,26 +268,25 @@ public class RouterServer implements Runnable {
 				case SUPPORT_OFFLOAD:
 					workerList.addDevice(device);
 					System.out.println(workerList.devices.size() + " devices are connected.");
-					sentMessage = DataPackage.obtain(Msg.SUPPORT_OFFLOAD);
 					try {
-						device.streams.send(sentMessage);
+						device.streams.send(receive);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 
 					break;
 				case REGISTER:
-					System.out.println("Device " + device.ip.toString() + " is registered");
 					device.state = DeviceState.STATE_AVAILABLE;
+					System.out.println("Device " + device.ip.toString() + " is registered");
 					int num = 0;
 					for (Device d : workerList.devices) {
 						if (d.state == DeviceState.STATE_AVAILABLE) {
 							num++;
 						}
 					}
-					sentMessage = DataPackage.obtain(Msg.REGISTERED);
+					receive.what = Msg.REGISTERED;
 					try {
-						device.streams.send(sentMessage);
+						device.streams.send(receive);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -309,7 +294,6 @@ public class RouterServer implements Runnable {
 					break;
 				case UNREGISTER:
 					device.state = DeviceState.STATE_NOT_AVAILABLE;
-					System.out.println("Device " + device.ip.toString() + " is unregistered");
 					num = 0;
 					for (Device d : workerList.devices) {
 						if (d.state == DeviceState.STATE_AVAILABLE) {
@@ -317,9 +301,10 @@ public class RouterServer implements Runnable {
 						}
 					}
 					System.out.println(num + " devices is available for helping.");
-					sentMessage = DataPackage.obtain(Msg.UNREGISTERED);
+					System.out.println("Device " + device.ip.toString() + " is unregistered");
+					receive.what = Msg.UNREGISTERED;
 					try {
-						device.streams.send(sentMessage);
+						device.streams.send(receive);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -352,7 +337,7 @@ public class RouterServer implements Runnable {
 					System.out.println("RTT(Router->Offloadee->Router) = " + receive.rttRouterToVM / 1000f);
 					InetAddress deviceID = (InetAddress) receive.source;
 					Device device = workerList.getDevices(deviceID);
-					packetQueue.isSmartphoneBusy=false;
+					packetQueue.isSmartphoneBusy = false;
 					try {
 						device.streams.send(receive);
 					} catch (IOException e) {
@@ -363,8 +348,8 @@ public class RouterServer implements Runnable {
 				}
 
 			}
-
+			workerList.removeDevice(device);
+			System.out.println("Device " + device.ip.toString() + " is unregistered");
 		}
 	}
-
 }

@@ -8,10 +8,7 @@ import java.util.concurrent.Executors;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
 import android.os.PowerManager;
 import android.os.RemoteException;
 import android.widget.Toast;
@@ -27,7 +24,7 @@ import com.symlab.hydra.profilers.DeviceProfiler;
 import com.symlab.hydra.profilers.LogRecord;
 import com.symlab.hydra.profilers.Profiler;
 import com.symlab.hydra.profilers.ProgramProfiler;
-import com.symlab.hydra.status.DeviceStatus;
+import com.symlab.hydra.profilers.WiFiProfiler;
 
 public class OffloadingService extends Service {
 	private static final String TAG = "OffloadingService";
@@ -39,13 +36,14 @@ public class OffloadingService extends Service {
 	public static boolean serviceStarted = false;
 	private ProgramProfiler progProfiler;
 	private DeviceProfiler devProfiler;
+	private WiFiProfiler wifiProfiler;
 	private BluetoothProfiler btProfiler;
 	private Profiler profiler;
 	private PowerManager.WakeLock wakeLock;
 	private PowerManager pm;
 	public Msg offloadingMethod;
 	public File dexOutputDir;
-	
+
 	private IOffloadingCallback mServiceCallback;
 
 	private final IOffloadingService.Stub mBinder = new IOffloadingService.Stub() {
@@ -53,7 +51,6 @@ public class OffloadingService extends Service {
 		@Override
 		public void addTaskToQueue(byte[] offloadableMethodBytes, String apkPath) throws RemoteException {
 			File dexFile = new File(apkPath);
-			System.out.println("start");
 			OffloadableMethod offloadableMethod = (OffloadableMethod) Utils.deserialize(offloadableMethodBytes, dexFile, dexOutputDir);
 			taskQueue.enqueue(offloadableMethod);
 		}
@@ -63,17 +60,15 @@ public class OffloadingService extends Service {
 			return toRouter.macAddress;
 		}
 
-		// @Override
-		// public void startProfiling(String methodName) throws RemoteException
-		// {
-		// profiler.startExecutionInfoTracking(methodName);
-		// }
-		//
-		// @Override
-		// public LogRecord stopProfiling(boolean receivedTask) throws
-		// RemoteException {
-		// return profiler.stopAndLogExecutionInfoTracking(receivedTask);
-		// }
+		@Override
+		public void startProfiling(String methodName) throws RemoteException {
+			profiler.startExecutionInfoTracking(methodName);
+		}
+
+		@Override
+		public LogRecord stopProfiling(boolean receivedTask) throws RemoteException {
+			return profiler.stopAndLogExecutionInfoTracking(receivedTask);
+		}
 
 		@Override
 		public void startHelping() throws RemoteException {
@@ -112,13 +107,13 @@ public class OffloadingService extends Service {
 		taskQueueHandler = new TaskQueueHandler(this, toRouter, taskQueue);
 		taskQueue.addObserver(taskQueueHandler);
 		executor.execute(toRouter);
+		btProfiler = new BluetoothProfiler();
 		progProfiler = new ProgramProfiler();
 		devProfiler = new DeviceProfiler(this);
-		btProfiler = new BluetoothProfiler();
-		profiler = new Profiler(this, progProfiler, devProfiler, btProfiler);
+		wifiProfiler = new WiFiProfiler(this);
+		profiler = new Profiler(this, progProfiler, devProfiler, wifiProfiler);
 		return START_STICKY;
 	}
-
 
 	@Override
 	public IBinder onBind(Intent arg0) {
@@ -135,6 +130,8 @@ public class OffloadingService extends Service {
 	private void unregisterAndStopServer() {
 		try {
 			toRouter.streams.send(DataPackage.obtain(Msg.UNREGISTER, toRouter.macAddress));
+			toRouter.streams.tearDownStream();
+			toRouter.socket.close();
 		} catch (Exception e) {
 		}
 	}
@@ -146,7 +143,7 @@ public class OffloadingService extends Service {
 	public static synchronized void setServiceOff() {
 		serviceStarted = false;
 	}
-	
+
 	public void setResults(OffloadableMethod arg0) {
 		try {
 			mServiceCallback.setResult(Utils.serialize2(arg0));
@@ -157,10 +154,10 @@ public class OffloadingService extends Service {
 
 	@Override
 	public void onDestroy() {
-		toRouter.disconnectToRouter();
-		wakeLock.release();
-		setServiceOff();
-		DeviceStatus.newInstance(this).tearDown();
+		// toRouter.disconnectToRouter();
+		// wakeLock.release();
+		// setServiceOff();
+		// DeviceStatus.newInstance(this).tearDown();
 		super.onDestroy();
 	}
 

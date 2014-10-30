@@ -24,6 +24,7 @@ import java.util.concurrent.Future;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ReceiverCallNotAllowedException;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
@@ -211,11 +212,11 @@ public class CloudService extends Service implements Runnable {
 					bout.write(bf.toByteArray());
 					bout.close();
 					// sstreams.addDex(dexFile);
-					Utils.serialize(null);
+					receive.dataByte = Utils.serialize(null);
 					receive.what = Msg.READY;
 					sstreams.send(receive);
 				} catch (IOException e) {
-
+					e.printStackTrace();
 				}
 				break;
 			case EXECUTE:
@@ -319,7 +320,7 @@ public class CloudService extends Service implements Runnable {
 				// DataPackage sentMessage = DataPackage.obtain(Msg.RESULT,
 				// result);
 
-				Utils.serialize(result);
+				sentMessage.dataByte = Utils.serialize(result);
 				sentMessage.what = Msg.RESULT;
 				sentMessage.pureExecTime = result.pureExecutionDuration;
 				sstreams.send(sentMessage);

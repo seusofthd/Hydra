@@ -101,11 +101,9 @@ public class ToRouterConnection implements Runnable {
 			try {
 				System.out.println("trying to connect to the Router " + routerAddress.toString().replaceAll("/", "") + ":" + Constants.DEVICE_PORT);
 				socket.connect(new InetSocketAddress(routerAddress, Constants.DEVICE_PORT), Constants.TIMEOUT);
-				System.out.println("connected!");
 				oos = new ObjectOutputStream(socket.getOutputStream());
 				ois = new DynamicObjectInputStream(socket.getInputStream());
 				streams = new ServerStreams(ois, oos, socket);
-				System.out.println(streams);
 				streams.send(DataPackage.obtain(Msg.SUPPORT_OFFLOAD));
 				System.out.println("Checking Router Support...");
 				DataPackage ret = (DataPackage) streams.receive();
@@ -211,7 +209,7 @@ public class ToRouterConnection implements Runnable {
 						bis.read(tempArray, 0, tempArray.length);
 						bis.close();
 						receive.what = Msg.APK_SEND;
-						Utils.serialize(new ByteFile(tempArray));
+						receive.dataByte = Utils.serialize(new ByteFile(tempArray));
 						streams.send(receive);
 					} catch (IOException e2) {
 						e2.printStackTrace();
@@ -226,11 +224,11 @@ public class ToRouterConnection implements Runnable {
 						bout.write(bf.toByteArray());
 						bout.close();
 						// sstreams.addDex(dexFile);
-						Utils.serialize(null);
+						receive.dataByte = Utils.serialize(null);
 						receive.what = Msg.READY;
 						sstreams.send(receive);
 					} catch (IOException e) {
-
+						e.printStackTrace();
 					}
 					break;
 				case READY:
@@ -238,7 +236,7 @@ public class ToRouterConnection implements Runnable {
 						OffloadableMethod offloadableMethod = taskQueue.dequeue(receive.id);
 						dexFile = new File(offloadableMethod.apkPath);
 						receive.what = Msg.EXECUTE;
-						Utils.serialize(offloadableMethod.methodPackage);
+						receive.dataByte = Utils.serialize(offloadableMethod.methodPackage);
 //						offloadableMethod.dataPackage = receive;
 						receive.rttDeviceToVM = System.currentTimeMillis();
 
@@ -383,7 +381,7 @@ public class ToRouterConnection implements Runnable {
 				// DataPackage sentMessage = DataPackage.obtain(Msg.RESULT,
 				// result);
 
-				Utils.serialize(result);
+				sentMessage.dataByte = Utils.serialize(result);
 				sentMessage.what = Msg.RESULT;
 				sentMessage.pureExecTime = result.pureExecutionDuration;
 				streams.send(sentMessage);

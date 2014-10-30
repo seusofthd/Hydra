@@ -3,6 +3,7 @@ package com.symlab.hydra.profilers;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
@@ -52,7 +53,7 @@ public class DeviceProfiler {
 	private long diffIdleTask;
 	private long prevIdleTask;
 	private ArrayList<Long> idleSystem;
-	ArrayList<Integer> screenBrightness;
+	private ArrayList<Integer> screenBrightness;
 	private HandlerThread updatingThread;
 	private Handler pidCpuUsageHandler;
 	private Handler screenBrightnessHandler;
@@ -113,11 +114,6 @@ public class DeviceProfiler {
 		stopCalculatingPidCpuUsage();
 		stopCalculatingScreenBrightness();
 		batteryVoltageDelta = (long) DeviceStatus.batteryVoltage - mStartBatteryVoltage;
-		System.out.println(screenBrightness);
-		System.out.println(idleSystem);
-		System.out.println(systemCpuUsage);
-		System.out.println(batteryVoltageDelta);
-		
 	}
 
 	boolean firstTime;
@@ -437,5 +433,38 @@ public class DeviceProfiler {
 
 	public int getScreenBrightness(int i) {
 		return screenBrightness.get(i);
+	}
+	
+	public float readCpuUsage() {
+		try {
+			RandomAccessFile reader = new RandomAccessFile("/proc/stat", "r");
+			String load = reader.readLine();
+
+			String[] toks = load.split(" ");
+
+			long idle1 = Long.parseLong(toks[5]);
+			long cpu1 = Long.parseLong(toks[2]) + Long.parseLong(toks[3]) + Long.parseLong(toks[4]) + Long.parseLong(toks[6]) + Long.parseLong(toks[7]) + Long.parseLong(toks[8]);
+
+			try {
+				Thread.sleep(360);
+			} catch (Exception e) {
+			}
+
+			reader.seek(0);
+			load = reader.readLine();
+			reader.close();
+
+			toks = load.split(" ");
+
+			long idle2 = Long.parseLong(toks[5]);
+			long cpu2 = Long.parseLong(toks[2]) + Long.parseLong(toks[3]) + Long.parseLong(toks[4]) + Long.parseLong(toks[6]) + Long.parseLong(toks[7]) + Long.parseLong(toks[8]);
+
+			return (float) (cpu2 - cpu1) / ((cpu2 + idle2) - (cpu1 + idle1));
+
+		} catch (IOException ex) {
+			ex.printStackTrace();
+		}
+
+		return 0;
 	}
 }

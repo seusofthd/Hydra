@@ -105,6 +105,11 @@ public class EC2Instance implements Serializable{
 		return output.toString();
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		return ID.equals(((EC2Instance)o).ID);
+	}
+	
 }
 
 enum InstanceState {

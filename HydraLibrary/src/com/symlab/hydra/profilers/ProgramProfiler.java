@@ -1,5 +1,9 @@
 package com.symlab.hydra.profilers;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+
 import android.os.SystemClock;
 
 public class ProgramProfiler {
@@ -21,7 +25,7 @@ public class ProgramProfiler {
 		methodName = mName;
 
 	}
-
+	
 	public void startExecutionInfoTracking() {
 		mStartTime = SystemClock.elapsedRealtimeNanos();
 

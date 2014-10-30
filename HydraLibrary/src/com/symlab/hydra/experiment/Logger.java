@@ -11,11 +11,14 @@ import android.text.format.Time;
 public class Logger {
 
 	File logFileDir = Environment.getExternalStorageDirectory();
-	File logFile = new File(logFileDir, "cpuEnergy.txt");
+	File logFile = new File(logFileDir, "hydra_log.csv");
+	Time t = new Time();;
 
-	
-	public static void log(String record) {
-
+	public static void log(String who, String record) {
+		long mtime = System.currentTimeMillis();
+		Logger l = new Logger();
+		l.t.set(mtime);
+		String time = "" + l.t.hour / 10 + l.t.hour % 10 + ":" + l.t.minute / 10 + l.t.minute % 10 + ":" + l.t.second / 10 + l.t.second % 10;
 		Logger logger = new Logger();
 		if (!logger.logFile.exists()) {
 			try {
@@ -32,7 +35,7 @@ public class Logger {
 		}
 		BufferedWriter writer = new BufferedWriter(fileWriter);
 		try {
-			writer.write(record);
+			writer.write("" + mtime / 1000 + "." + mtime % 1000 / 100 + mtime % 1000 % 100 / 10 + mtime % 1000 % 100 % 10 + "," + time + "," + who + "," + record + "\r\n");
 			writer.close();
 		} catch (IOException e) {
 			e.printStackTrace();

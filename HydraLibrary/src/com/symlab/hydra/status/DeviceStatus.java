@@ -55,7 +55,7 @@ public class DeviceStatus {
 	}
 
 	public Status readStatus() {
-		Status status = new Status();
+		// Status status = new Status();
 		status.numOfProcessors = runtime.availableProcessors();
 		status.cpuFrequency = getMaxCpuFreq();
 		status.cpuIdleness = 100f - readCpuUsage() * 100f;

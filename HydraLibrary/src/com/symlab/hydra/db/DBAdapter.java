@@ -75,8 +75,7 @@ public class DBAdapter {
 				TABLE_KEYS.set(i, TABLE_KEYS.get(i) + "");
 			}
 
-			// System.out.println(TABLE_OPTIONS.toString());
-			// System.out.println(TABLE_KEYS.toString());
+
 
 			if (i + 1 <= TABLE_OPTIONS.size() && TABLE_OPTIONS.get(i) != null)
 				keyString = keyString + " " + TABLE_KEYS.get(i) + " " + TABLE_OPTIONS.get(i);
@@ -125,8 +124,10 @@ public class DBAdapter {
 		for (int i = 0; key.size() > i; i++) {
 			contentValues.put(key.get(i), value.get(i));
 		}
-		Log.v("PowerDroid-Database", "Database Add: " + contentValues.toString());
-		return db.insert(DATABASE_TABLE, null, contentValues);
+//		Log.v("PowerDroid-Database", "Database Add: " + contentValues.toString());
+		long success = db.insert(DATABASE_TABLE, null, contentValues);
+		
+		return success;
 	}
 
 	/**

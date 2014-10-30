@@ -34,6 +34,7 @@ public class WiFiProfiler {
 	private ArrayList<Long> wifiRxPackets;
 	private ArrayList<Long> wifiTxBytes; // uplink data rate
 
+	private static double bandwidth = 0.0;
 	public WiFiProfiler(Context context) {
 		this.context = context;
 		wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
@@ -45,20 +46,35 @@ public class WiFiProfiler {
 		// threeGActiveState = new ArrayList<Byte>();
 	}
 
+	// this function must be invoked after the startTransmittedDataCounting() and stopAndCollectTransmittedData() functions
+	public long getBandwidth(){
+		return wifiTxBytes.get(wifiTxBytes.size()-1);
+	}
+	
+	// this function get the RSSI value
+	public int getRSSI(){
+		return wifiManager.getConnectionInfo().getRssi();
+	}
 	/**
 	 * Add a calculated bandwidth estimate for averaging the total bandwidth
 	 * 
 	 * @param estimate
 	 *            bytes per second
 	 */
-	/*
-	 * public static void addNewBandwidthEstimate(Double estimate) { Log.d(TAG,
-	 * "New bandwidth estimate - " + estimate); if (bwWindow.size() <
-	 * bwWindowMaxLength) { mBwSum += estimate; bwWindow.add(estimate);
-	 * bandwidth = mBwSum / bwWindow.size(); } else { mBwSum = mBwSum -
-	 * bwWindow.get(0) + estimate; bwWindow.remove(0); bwWindow.add(estimate);
-	 * bandwidth = mBwSum / bwWindow.size(); } }
-	 */
+	
+	 public static void addNewBandwidthEstimate(Double estimate) { 
+		 Log.d(TAG, "New bandwidth estimate - " + estimate); 
+		 if (bwWindow.size() < bwWindowMaxLength) { 
+			 mBwSum += estimate; 
+			 bwWindow.add(estimate);
+			 bandwidth = mBwSum / bwWindow.size(); 
+		 } else { 
+			 mBwSum = mBwSum -bwWindow.get(0) + estimate; 
+			 bwWindow.remove(0); bwWindow.add(estimate);
+			 bandwidth = mBwSum / bwWindow.size(); 
+		 } 
+	 }
+	 
 	/**
 	 * Add a new bandwidth estimate for averaging the total bandwidth
 	 * 
@@ -67,12 +83,12 @@ public class WiFiProfiler {
 	 * @param time
 	 *            time taken for sending (in nanoseconds)
 	 */
-	/*
-	 * public static void addNewBandwidthEstimate(Long bytes, Long time) {
-	 * Log.d(TAG, "Sent - " + bytes + " bytes in " + time + "ns"); // The
-	 * 1000000000 comes from measuring time in nanoseconds
-	 * addNewBandwidthEstimate(((double) bytes / (double) time) * 1000000000); }
-	 */
+	 public static void addNewBandwidthEstimate(Long bytes, Long time) {
+		 Log.d(TAG, "Sent - " + bytes + " bytes in " + time + "ns"); 
+		 // The 1000000000 comes from measuring time in nanoseconds
+		 addNewBandwidthEstimate(((double) bytes / (double) time) * 1000000000); 
+	 }
+	 
 	/**
 	 * Doing a few pings on a given connection to measure how big the RTT is
 	 * between the client and the remote machine

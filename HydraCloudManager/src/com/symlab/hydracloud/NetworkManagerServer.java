@@ -48,13 +48,6 @@ public class NetworkManagerServer implements Runnable {
 			EC2Instance reserveInstance1 = new EC2Instance(Constants.VM1_NAME, Constants.VM1_ID, "", null, ipPub1, ipPrv1, Constants.VM_PORT, Constants.VM_REGION);
 			reservedInstances.add(reserveInstance1);
 
-			// InetAddress ipPub2 = InetAddress.getByName(Constants.VM2_IP_PUB);
-			// InetAddress ipPrv2 = InetAddress.getByName(Constants.VM2_IP_PRV);
-			// EC2Instance reserveInstance2 = new
-			// EC2Instance(Constants.VM2_NAME, Constants.VM2_ID, "", null,
-			// ipPub2, ipPrv2, Constants.CLOUD_PORT, Constants.VM_REGION);
-			// reservedInstances.add(reserveInstance2);
-
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
@@ -157,11 +150,6 @@ public class NetworkManagerServer implements Runnable {
 	}
 
 	class Receiving implements Runnable {
-		String functionName = null;
-		Class[] paramTypes = null;
-		Object[] paramValues = null;
-		Object state = null;
-		Class stateDType = null;
 		ServerStreams sstreams = null;
 		Socket socket = null;
 		EC2Instance instance = new EC2Instance();
@@ -172,7 +160,7 @@ public class NetworkManagerServer implements Runnable {
 			this.socket = socket;
 		}
 
-		Runnable sender = new Runnable() {
+		Runnable pinger = new Runnable() {
 
 			@Override
 			public void run() {
@@ -231,7 +219,6 @@ public class NetworkManagerServer implements Runnable {
 					break;
 				case INIT_OFFLOAD:
 					ServerStreams VMsteams = getAvailableVMstream();
-					receive.rttManagerToVM = System.currentTimeMillis();
 					try {
 						VMsteams.send(receive);
 					} catch (IOException e2) {
@@ -248,7 +235,6 @@ public class NetworkManagerServer implements Runnable {
 					break;
 				case APK_SEND:
 					VMsteams = getAvailableVMstream();
-					receive.rttManagerToVM = System.currentTimeMillis();
 					try {
 						VMsteams.send(receive);
 					} catch (IOException e2) {
@@ -286,12 +272,6 @@ public class NetworkManagerServer implements Runnable {
 					// update instance fields
 					break;
 				case REG_VM:
-					// for (EC2Instance ec2Instance : availableInstances) {
-					// if (ec2Instance.socket==null ||
-					// ec2Instance.socket.isClosed()) {
-					// availableInstances.remove(ec2Instance);
-					// }
-					// }
 					instance.socket = socket;
 					instance.sstreams = sstreams;
 					EC2Instance ec2Instance = (EC2Instance) Utils.deserialize(receive.dataByte);
@@ -328,8 +308,14 @@ public class NetworkManagerServer implements Runnable {
 					break;
 				}
 			}
+			availableInstances.remove(instance);
+			System.out.println("VM " + instance.ID + " type=" + instance.type + " local-ip=" + instance.privateIP + " pub-ip=" + instance.publicIP + " is unregistered.");
 			sstreams.tearDownStream();
-			return;
+			try {
+				socket.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		};
 
 		private ServerStreams getAvailableVMstream() {
